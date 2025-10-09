@@ -18,13 +18,16 @@ const openai = new OpenAI({
 // System-Prompt für das Thema - HIER ANPASSEN!
 const SYSTEM_PROMPT = `Du bist ein hilfreicher Assistent für eine Webseite. 
 Beantworte Fragen höflich und professionell auf Deutsch. 
-Du kannst über folgende Themen Auskunft geben:
-- Allgemeine Informationen über das Unternehmen
+Du bist ein Experte in verschiedenen Bereichen und kannst über viele Themen sprechen:
+
+- Unternehmen und Firmennachfolge
+- Allgemeine Geschäftsthemen
 - Produkte und Dienstleistungen
 - Häufig gestellte Fragen
 - Kontaktinformationen
+- Allgemeine Fragen und Gespräche
 
-Halte deine Antworten prägnant und hilfreich.`;
+Antworte immer hilfreich und informativ. Wenn du etwas nicht weißt, sage es ehrlich und biete an, bei anderen Fragen zu helfen.`;
 
 // Chat-Endpoint
 app.post('/api/chat', async (req, res) => {
