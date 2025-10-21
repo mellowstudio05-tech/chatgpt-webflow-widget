@@ -12,16 +12,20 @@
             right: 20px;
             z-index: 9999;
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
         }
+
 
         .chat-toggle-button {
             width: 60px;
             height: 60px;
             border-radius: 30px;
-            background: linear-gradient(135deg, #E9453A 0%, #d63d33 100%);
+            background: linear-gradient(135deg, #4C2073 0%, #3A1855 100%);
             border: none;
             cursor: pointer;
-            box-shadow: 0 4px 12px rgba(233, 69, 58, 0.4);
+            box-shadow: 0 4px 12px rgba(76, 32, 115, 0.4);
             display: flex;
             align-items: center;
             justify-content: center;
@@ -30,7 +34,7 @@
 
         .chat-toggle-button:hover {
             transform: scale(1.1);
-            box-shadow: 0 6px 16px rgba(233, 69, 58, 0.5);
+            box-shadow: 0 6px 16px rgba(76, 32, 115, 0.5);
         }
 
         .chat-toggle-button svg {
@@ -70,7 +74,7 @@
         }
 
         .chat-header {
-            background: linear-gradient(135deg, #E9453A 0%, #d63d33 100%);
+            background: linear-gradient(135deg, #4C2073 0%, #3A1855 100%);
             color: white;
             padding: 20px;
             display: flex;
@@ -105,6 +109,33 @@
             justify-content: center;
         }
 
+        .resize-button {
+            background: none;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            color: white;
+            cursor: pointer;
+            font-size: 16px;
+            padding: 6px 8px;
+            border-radius: 4px;
+            transition: all 0.3s ease;
+            font-weight: 500;
+            width: 32px;
+            height: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .resize-button:hover {
+            background: rgba(255, 255, 255, 0.1);
+            border-color: rgba(255, 255, 255, 0.5);
+        }
+
+        .chat-window.expanded {
+            width: 760px;
+            height: 550px;
+        }
+
         .chat-messages {
             flex: 1;
             overflow-y: auto;
@@ -136,7 +167,7 @@
         }
 
         .message.user .message-bubble {
-            background: #0081B7;
+            background: #4C2073;
             color: white;
             border-bottom-right-radius: 4px;
         }
@@ -148,11 +179,193 @@
             box-shadow: 0 2px 4px rgba(0, 0, 0, 0.08);
         }
 
+        /* Rich Text Formatting */
+        .message-bubble h3 {
+            color: #4C2073;
+            font-size: 16px;
+            font-weight: 600;
+            margin: 12px 0 8px 0;
+            line-height: 1.3;
+            border-left: 3px solid #4C2073;
+            padding-left: 12px;
+        }
+
+        .message-bubble ul {
+            margin: 12px 0;
+            padding-left: 20px;
+            list-style-type: none;
+        }
+
+        .message-bubble ul li {
+            margin: 6px 0;
+            padding-left: 20px;
+            position: relative;
+            line-height: 1.5;
+        }
+
+        .message-bubble ul li::before {
+            content: "●";
+            color: #4C2073;
+            font-weight: bold;
+            position: absolute;
+            left: -8px;
+            top: 2px;
+            font-size: 12px;
+        }
+
+        /* Fallback für ältere Browser */
+        .message-bubble ul li:before {
+            content: "●";
+            color: #4C2073;
+            font-weight: bold;
+            position: absolute;
+            left: -8px;
+            top: 2px;
+            font-size: 12px;
+        }
+
+        .message-bubble ol {
+            margin: 12px 0;
+            padding-left: 20px;
+            counter-reset: item;
+        }
+
+        .message-bubble ol li {
+            margin: 6px 0;
+            padding-left: 25px;
+            position: relative;
+            line-height: 1.5;
+            counter-increment: item;
+        }
+
+        .message-bubble ol li::before {
+            content: counter(item) ".";
+            color: #4C2073;
+            font-weight: 600;
+            position: absolute;
+            left: -15px;
+            top: 2px;
+            font-size: 14px;
+        }
+
+        /* Fallback für ältere Browser */
+        .message-bubble ol li:before {
+            content: counter(item) ".";
+            color: #4C2073;
+            font-weight: 600;
+            position: absolute;
+            left: -15px;
+            top: 2px;
+            font-size: 14px;
+        }
+
+        .message-bubble strong {
+            font-weight: 600;
+            color: #4C2073;
+            background: rgba(76, 32, 115, 0.1);
+            padding: 1px 4px;
+            border-radius: 3px;
+        }
+
+        .message-bubble p {
+            margin: 10px 0;
+            line-height: 1.6;
+        }
+
+        .message-bubble p:first-child {
+            margin-top: 0;
+        }
+
+        .message-bubble p:last-child {
+            margin-bottom: 0;
+        }
+
+        /* Link Styling */
+        .message-bubble a {
+            color: #4C2073;
+            text-decoration: underline;
+            font-weight: 500;
+        }
+
+        .message-bubble a:hover {
+            color: #3A1855;
+            text-decoration: none;
+        }
+
         .message-time {
             font-size: 11px;
             color: #999;
             margin-top: 4px;
             padding: 0 4px;
+        }
+
+        /* Vorgeschlagene Fragen */
+        .suggested-questions {
+            margin: 16px 0;
+            padding: 0 4px;
+        }
+
+        .suggestions-title {
+            font-size: 12px;
+            color: #666;
+            margin: 0 0 8px 0;
+            font-weight: 500;
+        }
+
+        .question-buttons {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+        }
+
+        .question-btn {
+            background: rgba(76, 32, 115, 0.1);
+            border: 1px solid rgba(76, 32, 115, 0.3);
+            color: #4C2073;
+            padding: 6px 12px;
+            border-radius: 16px;
+            font-size: 12px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-weight: 500;
+            white-space: nowrap;
+        }
+
+        .question-btn:hover {
+            background: rgba(76, 32, 115, 0.2);
+            border-color: rgba(76, 32, 115, 0.5);
+            transform: translateY(-1px);
+        }
+
+        .question-btn:active {
+            transform: translateY(0);
+            background: rgba(76, 32, 115, 0.3);
+        }
+
+        /* Direkte Link-Buttons */
+        .direct-link-button {
+            background: #4C2073;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-top: 8px;
+            display: inline-block;
+            text-decoration: none;
+        }
+
+        .direct-link-button:hover {
+            background: #3A1855;
+            transform: translateY(-1px);
+            box-shadow: 0 2px 8px rgba(76, 32, 115, 0.3);
+        }
+
+        .direct-link-button:active {
+            transform: translateY(0);
         }
 
         .typing-indicator {
@@ -229,7 +442,7 @@
             width: 44px;
             height: 44px;
             border-radius: 22px;
-            background: #E9453A;
+            background: #4C2073;
             border: none;
             cursor: pointer;
             display: flex;
@@ -240,7 +453,7 @@
         }
 
         .send-button:hover:not(:disabled) {
-            background: #d63d33;
+            background: #3A1855;
         }
 
         .send-button:disabled {
@@ -273,11 +486,205 @@
         }
 
         /* Mobile Responsive */
-        @media (max-width: 480px) {
+        @media (max-width: 768px) {
+            .chat-widget-container {
+                bottom: 15px;
+                right: 15px;
+            }
+
+            .chat-toggle-button {
+                width: 56px;
+                height: 56px;
+            }
+
+            .chat-toggle-button svg {
+                width: 28px;
+                height: 28px;
+            }
+
             .chat-window {
-                width: calc(100vw - 40px);
-                height: calc(100vh - 100px);
-                max-height: 600px;
+                width: 90vw;
+                max-width: 400px;
+                height: 70vh;
+                max-height: 500px;
+                bottom: 85px;
+                right: 15px;
+                left: auto;
+                transform: none;
+                border-radius: 12px;
+                box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+            }
+
+            .chat-header {
+                padding: 14px 16px;
+                min-height: 50px;
+            }
+
+            .chat-header h3 {
+                font-size: 15px;
+                margin: 0;
+            }
+
+            .resize-button {
+                font-size: 14px;
+                padding: 4px 6px;
+                width: 28px;
+                height: 28px;
+            }
+
+            .close-button {
+                width: 26px;
+                height: 26px;
+                font-size: 18px;
+            }
+
+            .chat-messages {
+                padding: 12px;
+                flex: 1;
+                overflow-y: auto;
+            }
+
+            .message-bubble {
+                font-size: 14px;
+                padding: 8px 12px;
+                max-width: 85%;
+                line-height: 1.4;
+            }
+
+            .chat-input-container {
+                padding: 10px;
+                border-top: 1px solid #e0e0e0;
+            }
+
+            .chat-input {
+                font-size: 16px; /* Verhindert Zoom auf iOS */
+                padding: 8px 12px;
+                border-radius: 20px;
+            }
+
+            .send-button {
+                width: 36px;
+                height: 36px;
+            }
+
+            .send-button svg {
+                width: 16px;
+                height: 16px;
+            }
+
+            .message-time {
+                font-size: 9px;
+            }
+
+            /* Touch-friendly hover states */
+            .chat-toggle-button:active {
+                transform: scale(0.95);
+            }
+
+            .resize-button:active {
+                background: rgba(255, 255, 255, 0.2);
+            }
+
+            .send-button:active {
+                transform: scale(0.95);
+            }
+        }
+
+        @media (max-width: 480px) {
+            .chat-widget-container {
+                bottom: 10px;
+                right: 10px;
+            }
+
+            .chat-toggle-button {
+                width: 50px;
+                height: 50px;
+            }
+
+            .chat-toggle-button svg {
+                width: 24px;
+                height: 24px;
+            }
+
+            .chat-window {
+                width: 95vw;
+                height: 65vh;
+                max-height: 450px;
+                bottom: 70px;
+                right: 10px;
+                left: auto;
+                border-radius: 10px;
+            }
+
+            .chat-header {
+                padding: 12px 14px;
+                min-height: 45px;
+            }
+
+            .chat-header h3 {
+                font-size: 14px;
+            }
+
+            .resize-button {
+                font-size: 12px;
+                padding: 3px 5px;
+                width: 26px;
+                height: 26px;
+            }
+
+            .close-button {
+                width: 24px;
+                height: 24px;
+                font-size: 16px;
+            }
+
+            .chat-messages {
+                padding: 10px;
+            }
+
+            .message-bubble {
+                font-size: 13px;
+                padding: 7px 10px;
+                max-width: 88%;
+            }
+
+            .chat-input-container {
+                padding: 8px;
+            }
+
+            .chat-input {
+                padding: 7px 10px;
+                font-size: 15px;
+            }
+
+            .send-button {
+                width: 34px;
+                height: 34px;
+            }
+
+            .send-button svg {
+                width: 14px;
+                height: 14px;
+            }
+        }
+
+        /* Extra small screens */
+        @media (max-width: 360px) {
+            .chat-window {
+                width: 98vw;
+                height: 60vh;
+                max-height: 400px;
+                right: 5px;
+                left: auto;
+            }
+
+            .chat-header h3 {
+                font-size: 13px;
+            }
+
+            .message-bubble {
+                font-size: 12px;
+                max-width: 90%;
             }
         }
     </style>
@@ -295,19 +702,35 @@
         <div class="chat-window" id="chatWindow">
             <div class="chat-header">
                 <div>
-                    <h3>Chat Assistent</h3>
-                    <p>Wie kann ich Ihnen helfen?</p>
+                    <h3>Diakonie Chat Assistent</h3>
                 </div>
-                <button class="close-button" id="closeChat" aria-label="Chat schließen">&times;</button>
+                <div style="display: flex; align-items: center; gap: 8px;">
+                    <button class="resize-button" id="resizeChat" aria-label="Chat vergrößern">⛶</button>
+                    <button class="close-button" id="closeChat" aria-label="Chat schließen">&times;</button>
+                </div>
             </div>
 
             <div class="chat-messages" id="chatMessages">
                 <div class="message assistant">
                     <div class="message-bubble">
-                        Hallo! Ich bin Ihr persönlicher Assistent. Stellen Sie mir gerne Ihre Fragen zu unseren Themen.
+                        Guten Tag, ich bin Ihr professioneller Assistent und kann Sie durch die Homepage leiten und Ihnen dabei helfen das Richtige zu finden.
                     </div>
                     <span class="message-time" id="welcomeTime"></span>
                 </div>
+                
+                <!-- Vorgeschlagene Fragen -->
+                <div class="suggested-questions" id="suggestedQuestions">
+                    <p class="suggestions-title">Häufige Fragen:</p>
+                    <div class="question-buttons">
+                        <button class="question-btn" data-question="Ich suche Stellenanzeigen">Stellenanzeigen</button>
+                        <button class="question-btn" data-question="Seniorenheime">Seniorenheime</button>
+                        <button class="question-btn" data-question="Kitaplätze">Kitaplätze</button>
+                        <button class="question-btn" data-question="Beratung">Beratung</button>
+                        <button class="question-btn" data-question="Spenden">Spenden</button>
+                        <button class="question-btn" data-question="Kontakt">Kontakt</button>
+                    </div>
+                </div>
+                
                 <div class="typing-indicator" id="typingIndicator">
                     <span></span>
                     <span></span>
@@ -334,8 +757,8 @@
     </div>
 
     <script>
-        // Konfiguration - WICHTIG: Ändern Sie diese URL zu Ihrer Backend-URL
-        const API_URL = 'http://localhost:3000/api/chat'; // In Produktion ändern!
+        // Konfiguration - Backend-URL für Vercel
+        const API_URL = 'https://diakonie-chat-assistent.vercel.app/api/chat';
 
         // DOM Elemente
         const chatToggle = document.getElementById('chatToggle');
@@ -356,8 +779,23 @@
             chatWindow.classList.remove('open');
         });
 
+        // Chat vergrößern/verkleinern
+        const resizeChat = document.getElementById('resizeChat');
+        resizeChat.addEventListener('click', () => {
+            chatWindow.classList.toggle('expanded');
+            const isExpanded = chatWindow.classList.contains('expanded');
+            resizeChat.textContent = isExpanded ? '⛷' : '⛶';
+            resizeChat.setAttribute('aria-label', isExpanded ? 'Chat verkleinern' : 'Chat vergrößern');
+        });
+
         // Willkommenszeit setzen
         document.getElementById('welcomeTime').textContent = getCurrentTime();
+
+        // Chat-Verlauf laden beim Start
+        loadChatHistory();
+        
+        // Cross-Tab Synchronisation einrichten
+        setupCrossTabSync();
 
         // Auto-resize für Textarea
         chatInput.addEventListener('input', function() {
@@ -375,6 +813,56 @@
 
         // Send Button Click
         sendButton.addEventListener('click', sendMessage);
+
+        // Vorgeschlagene Fragen Funktionalität
+        const suggestedQuestionsDiv = document.getElementById('suggestedQuestions');
+        const questionButtons = document.querySelectorAll('.question-btn');
+
+        questionButtons.forEach(button => {
+            button.addEventListener('click', () => {
+                const questionText = button.getAttribute('data-question');
+                // Frage als User-Nachricht hinzufügen
+                addMessage(questionText, 'user');
+                // Vorgeschlagene Fragen ausblenden
+                suggestedQuestionsDiv.style.display = 'none';
+                // API Request für die Antwort
+                sendQuestionToAPI(questionText);
+            });
+        });
+
+        // API Request für vorgeschlagene Fragen
+        async function sendQuestionToAPI(question) {
+            // Button deaktivieren während Request
+            sendButton.disabled = true;
+            typingIndicator.classList.add('active');
+
+            try {
+                // API Request
+                const response = await fetch(API_URL, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ message: question })
+                });
+
+                if (!response.ok) {
+                    throw new Error('Netzwerkfehler');
+                }
+
+                const data = await response.json();
+                
+                // Assistent-Antwort hinzufügen
+                addMessage(data.reply, 'assistant');
+            } catch (error) {
+                console.error('Fehler:', error);
+                addMessage('Entschuldigung, es gab einen Fehler. Bitte versuchen Sie es erneut.', 'assistant');
+            } finally {
+                typingIndicator.classList.remove('active');
+                sendButton.disabled = false;
+                chatInput.focus();
+            }
+        }
 
         // Nachricht senden
         async function sendMessage() {
@@ -425,7 +913,7 @@
 
             const bubbleDiv = document.createElement('div');
             bubbleDiv.className = 'message-bubble';
-            bubbleDiv.textContent = text;
+            bubbleDiv.innerHTML = text;
 
             const timeSpan = document.createElement('span');
             timeSpan.className = 'message-time';
@@ -437,7 +925,89 @@
             // Vor dem Typing-Indikator einfügen
             chatMessages.insertBefore(messageDiv, typingIndicator);
 
+            // Direkte Link-Buttons verarbeiten
+            processDirectLinkButtons(bubbleDiv);
+
             // Scrollen zum neuesten Nachricht
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+
+            // Nachricht speichern
+            saveMessage(text, sender);
+        }
+
+        // Direkte Link-Buttons verarbeiten
+        function processDirectLinkButtons(messageElement) {
+            const directLinkButtons = messageElement.querySelectorAll('.direct-link-button');
+            directLinkButtons.forEach(button => {
+                button.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    const url = button.getAttribute('href');
+                    if (url) {
+                        window.open(url, '_blank');
+                    }
+                });
+            });
+        }
+
+        // Chat-Verlauf speichern (Session-basiert)
+        function saveMessage(text, sender) {
+            const messages = JSON.parse(localStorage.getItem('diakonie_chat_history') || '[]');
+            messages.push({
+                text: text,
+                sender: sender,
+                timestamp: new Date().toISOString()
+            });
+            
+            // Nur die letzten 50 Nachrichten speichern
+            if (messages.length > 50) {
+                messages.splice(0, messages.length - 50);
+            }
+            
+            localStorage.setItem('diakonie_chat_history', JSON.stringify(messages));
+            
+            // Synchronisation mit anderen Tabs/Seiten
+            localStorage.setItem('diakonie_chat_updated', Date.now().toString());
+        }
+
+        // Chat-Verlauf laden
+        function loadChatHistory() {
+            const messages = JSON.parse(localStorage.getItem('diakonie_chat_history') || '[]');
+            
+            // Willkommensnachricht nur anzeigen wenn keine Verlaufsdaten vorhanden
+            if (messages.length === 0) {
+                return;
+            }
+
+            // Alle vorhandenen Nachrichten löschen (außer Willkommensnachricht)
+            const existingMessages = chatMessages.querySelectorAll('.message');
+            existingMessages.forEach(msg => {
+                if (!msg.querySelector('.message-bubble').textContent.includes('professioneller Assistent')) {
+                    msg.remove();
+                }
+            });
+
+            // Verlaufsdaten laden
+            messages.forEach(msg => {
+                const messageDiv = document.createElement('div');
+                messageDiv.className = `message ${msg.sender}`;
+
+                const bubbleDiv = document.createElement('div');
+                bubbleDiv.className = 'message-bubble';
+                bubbleDiv.innerHTML = msg.text;
+
+                const timeSpan = document.createElement('span');
+                timeSpan.className = 'message-time';
+                const messageDate = new Date(msg.timestamp);
+                timeSpan.textContent = messageDate.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
+
+                messageDiv.appendChild(bubbleDiv);
+                messageDiv.appendChild(timeSpan);
+
+                // Vor dem Typing-Indikator einfügen
+                chatMessages.insertBefore(messageDiv, typingIndicator);
+            });
+
+            // Zum Ende scrollen
             chatMessages.scrollTop = chatMessages.scrollHeight;
         }
 
@@ -446,7 +1016,29 @@
             const now = new Date();
             return now.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
         }
+
+        // Cross-Tab Synchronisation einrichten
+        function setupCrossTabSync() {
+            // Event-Listener für Storage-Changes
+            window.addEventListener('storage', function(e) {
+                if (e.key === 'diakonie_chat_updated' && e.newValue) {
+                    // Chat wurde in einem anderen Tab aktualisiert
+                    loadChatHistory();
+                }
+            });
+            
+            // Auch bei Focus auf das Fenster prüfen
+            window.addEventListener('focus', function() {
+                const lastUpdate = localStorage.getItem('diakonie_chat_updated');
+                if (lastUpdate && lastUpdate !== window.diakonie_lastChatUpdate) {
+                    loadChatHistory();
+                    window.diakonie_lastChatUpdate = lastUpdate;
+                }
+            });
+            
+            // Initialen Update-Timestamp setzen
+            window.diakonie_lastChatUpdate = localStorage.getItem('diakonie_chat_updated');
+        }
     </script>
 </body>
 </html>
-
