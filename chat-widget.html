@@ -319,9 +319,9 @@
         }
 
         .question-btn {
-            background: rgba(76, 32, 115, 0.1);
-            border: 1px solid rgba(76, 32, 115, 0.3);
-            color: #4C2073;
+            background: #4C2073;
+            border: 1px solid #4C2073;
+            color: white;
             padding: 6px 12px;
             border-radius: 16px;
             font-size: 12px;
@@ -332,20 +332,21 @@
         }
 
         .question-btn:hover {
-            background: rgba(76, 32, 115, 0.2);
-            border-color: rgba(76, 32, 115, 0.5);
+            background: #3A1855;
+            border-color: #3A1855;
             transform: translateY(-1px);
+            box-shadow: 0 2px 8px rgba(76, 32, 115, 0.3);
         }
 
         .question-btn:active {
             transform: translateY(0);
-            background: rgba(76, 32, 115, 0.3);
+            background: #2A0F3F;
         }
 
         /* Direkte Link-Buttons */
         .direct-link-button {
             background: #4C2073;
-            color: white;
+            color: white !important;
             border: none;
             padding: 8px 16px;
             border-radius: 20px;
@@ -360,11 +361,14 @@
 
         .direct-link-button:hover {
             background: #3A1855;
+            color: white !important;
             transform: translateY(-1px);
             box-shadow: 0 2px 8px rgba(76, 32, 115, 0.3);
         }
 
         .direct-link-button:active {
+            background: #2A0F3F;
+            color: white !important;
             transform: translateY(0);
         }
 
@@ -581,9 +585,35 @@
                 transform: scale(0.95);
             }
 
-            .resize-button:active {
-                background: rgba(255, 255, 255, 0.2);
-            }
+        .resize-button:active {
+            background: rgba(255, 255, 255, 0.2);
+        }
+
+        .clear-chat-button {
+            background: none;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            color: white;
+            cursor: pointer;
+            font-size: 16px;
+            padding: 6px 8px;
+            border-radius: 4px;
+            transition: all 0.3s ease;
+            font-weight: 500;
+            width: 32px;
+            height: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .clear-chat-button:hover {
+            background: rgba(255, 255, 255, 0.1);
+            border-color: rgba(255, 255, 255, 0.5);
+        }
+
+        .clear-chat-button:active {
+            background: rgba(255, 255, 255, 0.2);
+        }
 
             .send-button:active {
                 transform: scale(0.95);
@@ -706,6 +736,7 @@
                 </div>
                 <div style="display: flex; align-items: center; gap: 8px;">
                     <button class="resize-button" id="resizeChat" aria-label="Chat vergrößern">⛶</button>
+                    <button class="clear-chat-button" id="clearChat" aria-label="Chat leeren">🗑</button>
                     <button class="close-button" id="closeChat" aria-label="Chat schließen">&times;</button>
                 </div>
             </div>
@@ -788,6 +819,14 @@
             resizeChat.setAttribute('aria-label', isExpanded ? 'Chat verkleinern' : 'Chat vergrößern');
         });
 
+        // Chat leeren
+        const clearChat = document.getElementById('clearChat');
+        clearChat.addEventListener('click', () => {
+            if (confirm('Möchten Sie wirklich den gesamten Chat-Verlauf löschen?')) {
+                clearChatHistory();
+            }
+        });
+
         // Willkommenszeit setzen
         document.getElementById('welcomeTime').textContent = getCurrentTime();
 
@@ -847,7 +886,7 @@
                 });
 
                 if (!response.ok) {
-                    throw new Error('Netzwerkfehler');
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
                 }
 
                 const data = await response.json();
@@ -855,14 +894,25 @@
                 // Assistent-Antwort hinzufügen
                 addMessage(data.reply, 'assistant');
             } catch (error) {
-                console.error('Fehler:', error);
-                addMessage('Entschuldigung, es gab einen Fehler. Bitte versuchen Sie es erneut.', 'assistant');
+                console.error('API Fehler:', error);
+                
+                // Fallback-Antworten basierend auf der Frage
+                let fallbackResponse = getFallbackResponse(question);
+                addMessage(fallbackResponse, 'assistant');
             } finally {
                 typingIndicator.classList.remove('active');
                 sendButton.disabled = false;
                 chatInput.focus();
             }
         }
+
+        // Einfache Fallback-Antwort bei API-Fehlern
+        function getFallbackResponse(question) {
+            return `<h3>Entschuldigung, ich kann gerade nicht auf die aktuellen Informationen zugreifen.</h3>
+            <p>Bitte versuchen Sie es in wenigen Minuten erneut oder besuchen Sie direkt unsere Website:</p>
+            <a href="https://www.diakonieffb.de" class="direct-link-button" target="_blank">Zur Diakonie-Website →</a>`;
+        }
+
 
         // Nachricht senden
         async function sendMessage() {
@@ -897,8 +947,11 @@
                 // Assistent-Antwort hinzufügen
                 addMessage(data.reply, 'assistant');
             } catch (error) {
-                console.error('Fehler:', error);
-                addMessage('Entschuldigung, es gab einen Fehler. Bitte versuchen Sie es erneut.', 'assistant');
+                console.error('API Fehler:', error);
+                
+                // Fallback-Antworten basierend auf der Frage
+                let fallbackResponse = getFallbackResponse(message);
+                addMessage(fallbackResponse, 'assistant');
             } finally {
                 typingIndicator.classList.remove('active');
                 sendButton.disabled = false;
@@ -1038,6 +1091,30 @@
             
             // Initialen Update-Timestamp setzen
             window.diakonie_lastChatUpdate = localStorage.getItem('diakonie_chat_updated');
+        }
+
+        // Chat-Verlauf löschen
+        function clearChatHistory() {
+            // LocalStorage löschen
+            localStorage.removeItem('diakonie_chat_history');
+            localStorage.setItem('diakonie_chat_updated', Date.now().toString());
+            
+            // Alle Nachrichten aus dem Chat entfernen (außer Willkommensnachricht)
+            const messages = chatMessages.querySelectorAll('.message');
+            messages.forEach(msg => {
+                if (!msg.querySelector('.message-bubble').textContent.includes('professioneller Assistent')) {
+                    msg.remove();
+                }
+            });
+            
+            // Vorgeschlagene Fragen wieder anzeigen
+            const suggestedQuestionsDiv = document.getElementById('suggestedQuestions');
+            if (suggestedQuestionsDiv) {
+                suggestedQuestionsDiv.style.display = 'block';
+            }
+            
+            // Zum Anfang scrollen
+            chatMessages.scrollTop = 0;
         }
     </script>
 </body>
