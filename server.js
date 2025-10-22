@@ -202,14 +202,16 @@ Beispiel: "Weitere Informationen finden Sie auf unserer <a href='https://www.tl-
 
 FORMATIERUNG: Verwende IMMER strukturierte Antworten mit HTML-Formatierung:
 
-WICHTIG: Bei jeder Antwort mit Listen oder Strukturierung MUSS HTML verwendet werden:
+WICHTIG: Bei JEDER Antwort MUSS HTML verwendet werden - KEIN Fließtext!
 
 - Für Überschriften mit Einleitung: <h3>Überschrift</h3><p>Einleitungstext</p>
 - Für Aufzählungen: <ul><li><strong>Titel</strong> - Beschreibung</li></ul>
 - Für wichtige Texte: <strong>Wichtiger Text</strong>
 - Für Absätze: <p>Text mit Zeilenumbruch</p>
 
-MUSTER für alle strukturierten Antworten:
+KRITISCHE REGEL: Formatiere ALLE Antworten mit strukturierten HTML-Aufzählungen. Verwende NIEMALS Fließtext für Listen oder mehrere Punkte.
+
+MUSTER für ALLE Antworten:
 "<h3>Überschrift der Antwort:</h3>
 <p>Einleitungstext der erklärt, was folgt.</p>
 
@@ -229,7 +231,18 @@ Beispiel für "Was macht euch einzigartig?":
 <li><strong>Erfolgsbezogenes Vergütungsmodell:</strong> Wir verdienen nur, wenn Sie erfolgreich verkaufen - das sorgt für maximale Motivation.</li>
 </ul>"
 
-Empfehle bei komplexen Anfragen ein unverbindliches Beratungsgespräch.`;
+Empfehle bei komplexen Anfragen ein unverbindliches Beratungsgespräch.
+
+UNTERNEHMENSBÖRSE-ANTWORTEN:
+Bei Fragen zu Unternehmen zum Kauf oder Verkauf:
+1. Verwende IMMER HTML-Aufzählungen (<ul><li>)
+2. Strukturiere die Antwort so:
+   <h3>Passende Unternehmen aus unserer Börse:</h3>
+   <ul>
+   <li><strong>Unternehmensname</strong> - Beschreibung, Preis, Branche, Region</li>
+   </ul>
+3. KEIN Fließtext für Unternehmenslisten
+4. Verweise immer auf die Unternehmensbörse: https://www.tl-consult.de/unternehmensboerse`;
 
 // Chat-Endpoint
 app.post('/api/chat', async (req, res) => {
@@ -266,7 +279,15 @@ ${index + 1}. **${company.title}**
 
 ${companies.length > 5 ? `\n... und ${companies.length - 5} weitere Unternehmen verfügbar.` : ''}
 
-Verwende diese aktuellen Daten, um dem Nutzer passende Unternehmen zu empfehlen. Verweise auf die Unternehmensbörse: https://www.tl-consult.de/unternehmensboerse`;
+WICHTIG: Formatiere deine Antwort IMMER mit HTML-Aufzählungen (<ul><li>). Verwende KEINEN Fließtext für die Unternehmensliste. Strukturiere die Antwort so:
+
+<h3>Passende Unternehmen aus unserer Börse:</h3>
+<ul>
+<li><strong>Unternehmensname</strong> - Beschreibung und Details</li>
+<li><strong>Unternehmensname</strong> - Beschreibung und Details</li>
+</ul>
+
+Verweise auf die Unternehmensbörse: https://www.tl-consult.de/unternehmensboerse`;
             }
         }
 
