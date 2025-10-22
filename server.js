@@ -1,6 +1,8 @@
 const express = require('express');
 const cors = require('cors');
 const OpenAI = require('openai');
+const axios = require('axios');
+const cheerio = require('cheerio');
 require('dotenv').config();
 
 const app = express();
@@ -24,6 +26,73 @@ const openai = new OpenAI({
     apiKey: process.env.OPENAI_API_KEY
 });
 
+// Web-Scraping Funktionen
+async function scrapeUnternehmensboerse() {
+    try {
+        const response = await axios.get('https://www.tl-consult.de/unternehmensboerse', {
+            headers: {
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+            }
+        });
+        
+        const $ = cheerio.load(response.data);
+        const companies = [];
+        
+        // Scrape company listings based on the structure you provided
+        $('div[role="listitem"]').each((index, element) => {
+            const $el = $(element);
+            const link = $el.find('a[href*="/unternehmensborse/"]').attr('href');
+            const title = $el.find('.text-block-4').text().trim();
+            const description = $el.find('.paragraph-3').text().trim();
+            const price = $el.find('.text-block-28').text().trim();
+            const date = $el.find('div[id*="w-node"]').text().trim();
+            const status = $el.find('.text-block-5').text().trim() || 'Verfügbar';
+            
+            // Extract branches
+            const branches = [];
+            $el.find('a[href*="/branche/"]').each((i, branchEl) => {
+                branches.push($(branchEl).text().trim());
+            });
+            
+            // Extract regions
+            const regions = [];
+            $el.find('a[href*="/filter/"]').each((i, regionEl) => {
+                regions.push($(regionEl).text().trim());
+            });
+            
+            if (title && description) {
+                companies.push({
+                    title,
+                    description,
+                    price: price || 'Preis auf Anfrage',
+                    date,
+                    status,
+                    branches,
+                    regions,
+                    link: link ? `https://www.tl-consult.de${link}` : null
+                });
+            }
+        });
+        
+        return companies;
+    } catch (error) {
+        console.error('Fehler beim Scraping der Unternehmensbörse:', error);
+        return [];
+    }
+}
+
+// Funktion zur Erkennung von Unternehmenssuche-Fragen
+function isCompanySearchQuery(message) {
+    const searchKeywords = [
+        'unternehmen', 'firma', 'betrieb', 'kauf', 'verkauf', 'nachfolge',
+        'unternehmensbörse', 'börse', 'angebot', 'gesucht', 'suche',
+        'branche', 'branchen', 'region', 'standort', 'preis', 'bewertung'
+    ];
+    
+    const lowerMessage = message.toLowerCase();
+    return searchKeywords.some(keyword => lowerMessage.includes(keyword));
+}
+
 // System-Prompt für TL Consult - Unternehmensnachfolge
 const SYSTEM_PROMPT = `Du bist der Chat-Assistent von TL Consult M&A GmbH, einem spezialisierten Beratungsunternehmen für Unternehmensnachfolge im Mittelstand.
 
@@ -40,26 +109,26 @@ const SYSTEM_PROMPT = `Du bist der Chat-Assistent von TL Consult M&A GmbH, einem
    - Umsatzsteuer-ID: DE812598354
 
 UNSERE KERNDIENSTLEISTUNGEN:
-1. UNTERNEHMENSVERKAUF
+• UNTERNEHMENSVERKAUF
    - Professionelle Begleitung des Verkaufsprozesses
    - Erstellung von Exposés und Unternehmensbewertungen
    - Diskretion und Anonymität gewährleistet
    - Über 2.500 geprüfte Kaufinteressenten in unserer Datenbank
    - Erfolgsbezogenes Vergütungsmodell
 
-2. UNTERNEHMENSBEWERTUNG
+• UNTERNEHMENSBEWERTUNG
    - Marktgerechte Bewertung nach aktuellen Standards
    - Kaufpreisermittlung für Lebenswerk
    - Transparente Bewertungsmethoden
    - Link: https://www.tl-consult.de/leistungen/unternehmensverkauf
 
-3. UNTERNEHMENSBÖRSE
+• UNTERNEHMENSBÖRSE
    - Ausgewählte Verkaufsangebote und Kaufgesuche
    - DACH-Region (Deutschland, Österreich, Schweiz)
    - Matching-System für Käufer und Verkäufer
    - Link: https://www.tl-consult.de/unternehmensboerse
 
-4. UNTERNEHMENSKAUF
+• UNTERNEHMENSKAUF
    - Beratung für Existenzgründer (MBI)
    - Unterstützung bei MBO-Prozessen
    - Beteiligungsgesellschaften und Family Offices
@@ -83,11 +152,11 @@ Für alle Fachbegriffe der Unternehmensnachfolge bieten wir ein umfassendes Glos
 - Link: https://www.tl-consult.de/glossar
 
 VERKAUFSPROZESS (5 Phasen):
-1. Erstes Gespräch - Unverbindliche Beratung
-2. Vorbereitung - Exposé, Bewertung, Kurzprofil
-3. Interessentensuche - Diskretes Matching
-4. Verhandlungen - LOI, Due Diligence, Kaufvertrag
-5. Übergabe - Vertragsabschluss und Nachbetreuung
+• Erstes Gespräch - Unverbindliche Beratung
+• Vorbereitung - Exposé, Bewertung, Kurzprofil
+• Interessentensuche - Diskretes Matching
+• Verhandlungen - LOI, Due Diligence, Kaufvertrag
+• Übergabe - Vertragsabschluss und Nachbetreuung
 
 HÄUFIGE FRAGEN:
 - "Wie lange dauert ein Unternehmensverkauf?" → 6-18 Monate je nach Komplexität
@@ -136,7 +205,6 @@ FORMATIERUNG: Verwende IMMER strukturierte Antworten mit HTML-Formatierung:
 WICHTIG: Bei jeder Antwort mit Listen oder Strukturierung MUSS HTML verwendet werden:
 
 - Für Überschriften mit Einleitung: <h3>Überschrift</h3><p>Einleitungstext</p>
-- Für nummerierte Listen: <ol><li><strong>Titel</strong> - Beschreibung</li></ol>
 - Für Aufzählungen: <ul><li><strong>Titel</strong> - Beschreibung</li></ul>
 - Für wichtige Texte: <strong>Wichtiger Text</strong>
 - Für Absätze: <p>Text mit Zeilenumbruch</p>
@@ -145,21 +213,21 @@ MUSTER für alle strukturierten Antworten:
 "<h3>Überschrift der Antwort:</h3>
 <p>Einleitungstext der erklärt, was folgt.</p>
 
-<ol>
+<ul>
 <li><strong>Punkt 1</strong> - Detaillierte Beschreibung des ersten Punktes</li>
 <li><strong>Punkt 2</strong> - Detaillierte Beschreibung des zweiten Punktes</li>
 <li><strong>Punkt 3</strong> - Detaillierte Beschreibung des dritten Punktes</li>
-</ol>"
+</ul>"
 
 Beispiel für "Was macht euch einzigartig?":
 "<h3>Unsere Einzigartigkeit:</h3>
 <p>Unsere Einzigartigkeit basiert auf mehreren Faktoren:</p>
 
-<ol>
+<ul>
 <li><strong>Spezialisierung auf Unternehmensnachfolge im Mittelstand:</strong> Wir sind Experten für Unternehmensverkauf und -bewertung im Mittelstand und konzentrieren uns ausschließlich auf diesen Bereich.</li>
 <li><strong>Über 2.500 geprüfte Kaufinteressenten:</strong> Unsere umfangreiche Datenbank ermöglicht es uns, den richtigen Käufer für Ihr Unternehmen zu finden.</li>
 <li><strong>Erfolgsbezogenes Vergütungsmodell:</strong> Wir verdienen nur, wenn Sie erfolgreich verkaufen - das sorgt für maximale Motivation.</li>
-</ol>"
+</ul>"
 
 Empfehle bei komplexen Anfragen ein unverbindliches Beratungsgespräch.`;
 
@@ -174,13 +242,41 @@ app.post('/api/chat', async (req, res) => {
             });
         }
 
+        let systemPrompt = SYSTEM_PROMPT;
+        let additionalContext = '';
+
+        // Prüfen ob es sich um eine Unternehmenssuche handelt
+        if (isCompanySearchQuery(message)) {
+            console.log('Unternehmenssuche erkannt, starte Scraping...');
+            const companies = await scrapeUnternehmensboerse();
+            
+            if (companies.length > 0) {
+                additionalContext = `\n\nAKTUELLE UNTERNEHMENSBÖRSE-DATEN:
+Hier sind die aktuell verfügbaren Unternehmen aus unserer Unternehmensbörse:
+
+${companies.slice(0, 5).map((company, index) => `
+${index + 1}. **${company.title}**
+   - Beschreibung: ${company.description}
+   - Preis: ${company.price}
+   - Status: ${company.status}
+   - Branchen: ${company.branches.join(', ')}
+   - Regionen: ${company.regions.join(', ')}
+   - Link: ${company.link || 'Nicht verfügbar'}
+`).join('\n')}
+
+${companies.length > 5 ? `\n... und ${companies.length - 5} weitere Unternehmen verfügbar.` : ''}
+
+Verwende diese aktuellen Daten, um dem Nutzer passende Unternehmen zu empfehlen. Verweise auf die Unternehmensbörse: https://www.tl-consult.de/unternehmensboerse`;
+            }
+        }
+
         // OpenAI API Aufruf
         const completion = await openai.chat.completions.create({
             model: 'gpt-3.5-turbo', // oder 'gpt-4' für bessere Qualität
             messages: [
                 {
                     role: 'system',
-                    content: SYSTEM_PROMPT
+                    content: systemPrompt + additionalContext
                 },
                 {
                     role: 'user',
@@ -188,7 +284,7 @@ app.post('/api/chat', async (req, res) => {
                 }
             ],
             temperature: 0.7,
-            max_tokens: 500
+            max_tokens: 800
         });
 
         const reply = completion.choices[0].message.content;
@@ -249,6 +345,25 @@ app.post('/api/chat-advanced', async (req, res) => {
         console.error('Fehler bei OpenAI API:', error);
         res.status(500).json({ 
             error: 'Ein Fehler ist aufgetreten' 
+        });
+    }
+});
+
+// Unternehmensbörse-Daten Endpoint
+app.get('/api/unternehmensboerse', async (req, res) => {
+    try {
+        const companies = await scrapeUnternehmensboerse();
+        res.json({ 
+            success: true, 
+            companies,
+            count: companies.length,
+            source: 'https://www.tl-consult.de/unternehmensboerse'
+        });
+    } catch (error) {
+        console.error('Fehler beim Laden der Unternehmensbörse:', error);
+        res.status(500).json({ 
+            success: false, 
+            error: 'Fehler beim Laden der Unternehmensbörse' 
         });
     }
 });
