@@ -42,7 +42,10 @@ const ALLOWED_URLS = [
 // Web-Scraping Funktionen
 async function scrapeUnternehmensboerse() {
     try {
-        const response = await axios.get('https://www.tl-consult.de/unternehmensboerse', {
+        console.log('Starte Scraping der Unternehmensbörse...');
+        
+        // Versuche zuerst die Hauptseite zu scrapen
+        const response = await axios.get('https://www.tl-consult.de/', {
             headers: {
                 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
             }
@@ -51,96 +54,135 @@ async function scrapeUnternehmensboerse() {
         const $ = cheerio.load(response.data);
         const companies = [];
         
-        // Scrape company listings from the actual website structure
-        // Based on the real companies visible on tl-consult.de
+        console.log('HTML geladen, suche nach Unternehmen...');
         
-        // Extract companies from the main page content
-        const companyData = [
-            {
-                title: "Hersteller von Sanitärarmaturen für den öffentlichen Bereich",
-                description: "Ein polnischer Betrieb im Bereich der Herstellung von Sanitärarmaturen für öffentliche Einrichtungen sucht einen Nachfolger.",
-                price: "Preis auf Anfrage",
-                date: "8.11.2025",
-                status: "Verkauf",
-                branches: ["Produktion", "Handwerk"],
-                regions: ["Polen", "Ausland"],
-                link: "https://www.tl-consult.de/unternehmensboerse"
-            },
-            {
-                title: "Anbieter im Baby- und Familiensegment",
-                description: "Das Unternehmen ist einer der wachstumsstärksten Anbieter im Segment Baby- und Familienprodukte. Es verfügt über ein fokussiertes Sortiment und hohe Markenbekanntheit.",
-                price: "Preis auf Anfrage",
-                date: "20.8.2025",
-                status: "Verkauf",
-                branches: ["Produktion", "Handel"],
-                regions: ["Deutschland"],
-                link: "https://www.tl-consult.de/unternehmensboerse"
-            },
-            {
-                title: "Unternehmen im Bereich B2B-Software gesucht",
-                description: "Ziel unseres Mandanten ist es in Unternehmen zu investieren und diese langfristig weiterzuentwickeln. Dies ist mit seiner jahrelangen Erfahrung im Bereich B2B-Software.",
-                price: "Preis auf Anfrage",
-                date: "24.6.2025",
-                status: "Kauf",
-                branches: ["Dienstleistungen", "IT"],
-                regions: ["Deutschland"],
-                link: "https://www.tl-consult.de/unternehmensboerse"
-            },
-            {
-                title: "Gebäudesicherheitstechnik / Gebäudeautomation gesucht",
-                description: "Betriebswirt mit unternehmerischer Prägung durch Familienunternehmen sucht ein Unternehmen aus dem Bereich Gebäudesicherheit und Gebäudeautomation",
-                price: "6.000.000€",
-                date: "16.5.2025",
-                status: "Kauf",
-                branches: ["Dienstleistungen", "Handwerk"],
-                regions: ["Deutschland"],
-                link: "https://www.tl-consult.de/unternehmensboerse"
-            }
+        // Suche nach Unternehmen in verschiedenen Bereichen der Seite
+        const companySelectors = [
+            'div[class*="company"]',
+            'div[class*="unternehmen"]',
+            'div[class*="börse"]',
+            'div[class*="boerse"]',
+            'div[class*="listing"]',
+            'div[class*="item"]',
+            'section[class*="company"]',
+            'section[class*="unternehmen"]'
         ];
         
-        // Add the real companies to the results
-        companies.push(...companyData);
+        let foundCompanies = 0;
         
-        // Try to extract additional companies from the actual HTML
-        $('div').each((index, element) => {
-            const $el = $(element);
-            const text = $el.text().trim();
-            
-            // Look for company patterns in the text
-            if (text.includes('sucht einen Nachfolger') || 
-                text.includes('gesucht') || 
-                text.includes('zu Verkaufen') ||
-                text.includes('Anbieter im') ||
-                text.includes('Hersteller von')) {
+        // Durchsuche alle möglichen Selektoren
+        companySelectors.forEach(selector => {
+            $(selector).each((index, element) => {
+                const $el = $(element);
+                const text = $el.text().trim();
                 
-                // Extract title (first line)
-                const lines = text.split('\n').filter(line => line.trim().length > 0);
-                if (lines.length >= 2) {
-                    const title = lines[0].trim();
-                    const description = lines[1].trim();
+                // Prüfe auf Unternehmensmuster
+                if (text.includes('Hersteller von') || 
+                    text.includes('Anbieter im') || 
+                    text.includes('Unternehmen im Bereich') ||
+                    text.includes('gesucht') ||
+                    text.includes('sucht einen Nachfolger') ||
+                    text.includes('Gebäudesicherheitstechnik')) {
                     
-                    // Avoid duplicates
-                    if (!companies.some(c => c.title === title) && title.length > 10) {
-                        companies.push({
-                            title: title,
-                            description: description,
-                            price: "Preis auf Anfrage",
-                            date: new Date().toLocaleDateString('de-DE'),
-                            status: text.includes('gesucht') ? 'Kauf' : 'Verkauf',
-                            branches: [],
-                            regions: [],
-                            link: "https://www.tl-consult.de/unternehmensboerse"
-                        });
+                    const lines = text.split('\n').filter(line => line.trim().length > 5);
+                    if (lines.length >= 2) {
+                        const title = lines[0].trim();
+                        const description = lines[1].trim();
+                        
+                        // Validiere den Titel
+                        if (title.length > 10 && title.length < 200 && 
+                            !title.includes('Weitere Informationen') &&
+                            !title.includes('Zur Unternehmensbörse') &&
+                            !companies.some(c => c.title === title)) {
+                            
+                            companies.push({
+                                title: title,
+                                description: description,
+                                price: text.includes('6.000.000€') ? '6.000.000€' : 'Preis auf Anfrage',
+                                date: extractDate(text) || new Date().toLocaleDateString('de-DE'),
+                                status: text.includes('gesucht') ? 'Kauf' : 'Verkauf',
+                                branches: extractBranches(text),
+                                regions: extractRegions(text),
+                                link: "https://www.tl-consult.de/unternehmensboerse"
+                            });
+                            
+                            foundCompanies++;
+                            console.log(`Unternehmen gefunden: ${title}`);
+                        }
                     }
                 }
-            }
+            });
         });
         
+        // Fallback: Durchsuche alle divs nach Unternehmensmustern
+        if (foundCompanies === 0) {
+            console.log('Keine Unternehmen mit Selektoren gefunden, durchsuche alle divs...');
+            
+            $('div').each((index, element) => {
+                const $el = $(element);
+                const text = $el.text().trim();
+                
+                if (text.includes('Hersteller von Sanitärarmaturen') ||
+                    text.includes('Anbieter im Baby- und Familiensegment') ||
+                    text.includes('Unternehmen im Bereich B2B-Software') ||
+                    text.includes('Gebäudesicherheitstechnik')) {
+                    
+                    const lines = text.split('\n').filter(line => line.trim().length > 5);
+                    if (lines.length >= 2) {
+                        const title = lines[0].trim();
+                        const description = lines[1].trim();
+                        
+                        if (title.length > 10 && !companies.some(c => c.title === title)) {
+                            companies.push({
+                                title: title,
+                                description: description,
+                                price: text.includes('6.000.000€') ? '6.000.000€' : 'Preis auf Anfrage',
+                                date: extractDate(text) || new Date().toLocaleDateString('de-DE'),
+                                status: text.includes('gesucht') ? 'Kauf' : 'Verkauf',
+                                branches: extractBranches(text),
+                                regions: extractRegions(text),
+                                link: "https://www.tl-consult.de/unternehmensboerse"
+                            });
+                            
+                            foundCompanies++;
+                            console.log(`Fallback Unternehmen gefunden: ${title}`);
+                        }
+                    }
+                }
+            });
+        }
+        
+        console.log(`Insgesamt ${companies.length} Unternehmen gefunden`);
         return companies;
+        
     } catch (error) {
         console.error('Fehler beim Scraping der Unternehmensbörse:', error);
         return [];
     }
+}
+
+// Hilfsfunktionen für Datenextraktion
+function extractDate(text) {
+    const dateMatch = text.match(/(\d{1,2}\.\d{1,2}\.\d{4})/);
+    return dateMatch ? dateMatch[1] : null;
+}
+
+function extractBranches(text) {
+    const branches = [];
+    if (text.includes('Produktion')) branches.push('Produktion');
+    if (text.includes('Handwerk')) branches.push('Handwerk');
+    if (text.includes('Dienstleistungen')) branches.push('Dienstleistungen');
+    if (text.includes('IT')) branches.push('IT');
+    if (text.includes('Handel')) branches.push('Handel');
+    return branches;
+}
+
+function extractRegions(text) {
+    const regions = [];
+    if (text.includes('Polen')) regions.push('Polen');
+    if (text.includes('Deutschland')) regions.push('Deutschland');
+    if (text.includes('Ausland')) regions.push('Ausland');
+    return regions;
 }
 
 // Funktion zur Erkennung von Unternehmenssuche-Fragen
@@ -476,18 +518,26 @@ app.post('/api/chat-advanced', async (req, res) => {
 // Unternehmensbörse-Daten Endpoint
 app.get('/api/unternehmensboerse', async (req, res) => {
     try {
+        console.log('API-Aufruf: Unternehmensbörse-Daten werden geladen...');
         const companies = await scrapeUnternehmensboerse();
+        
+        console.log(`API-Antwort: ${companies.length} Unternehmen gefunden`);
+        companies.forEach((company, index) => {
+            console.log(`${index + 1}. ${company.title}`);
+        });
+        
         res.json({ 
             success: true, 
             companies,
             count: companies.length,
-            source: 'https://www.tl-consult.de/unternehmensboerse'
+            source: 'https://www.tl-consult.de/'
         });
     } catch (error) {
         console.error('Fehler beim Laden der Unternehmensbörse:', error);
         res.status(500).json({ 
             success: false, 
-            error: 'Fehler beim Laden der Unternehmensbörse' 
+            error: 'Fehler beim Laden der Unternehmensbörse',
+            details: error.message
         });
     }
 });
