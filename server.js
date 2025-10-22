@@ -26,6 +26,19 @@ const openai = new OpenAI({
     apiKey: process.env.OPENAI_API_KEY
 });
 
+// Erlaubte URLs für Scraping
+const ALLOWED_URLS = [
+    'https://www.tl-consult.de/',
+    'https://www.tl-consult.de/leistungen/unternehmensverkauf',
+    'https://www.tl-consult.de/unternehmensboerse',
+    'https://www.tl-consult.de/uber-uns',
+    'https://www.tl-consult.de/netzwerk',
+    'https://www.tl-consult.de/neuigkeiten',
+    'https://www.tl-consult.de/podcast',
+    'https://www.tl-consult.de/kontakt',
+    'https://www.tl-consult.de/fusszeile/impressum'
+];
+
 // Web-Scraping Funktionen
 async function scrapeUnternehmensboerse() {
     try {
@@ -165,23 +178,34 @@ HÄUFIGE FRAGEN:
 - "Wer sind typische Käufer?" → MBI, MBO, Beteiligungsgesellschaften, Strategen
 
 WICHTIG - KONTAKT & BERATUNG:
-Bei folgenden Anfragen biete WhatsApp Business an:
+Bei folgenden Anfragen biete IMMER WhatsApp Business an (höchste Priorität):
 - Persönliche Beratung oder Gespräch mit einem Menschen
 - "Wie kann ich euch erreichen?"
 - "Wie ist die Nummer für WhatsApp?"
 - "Kontaktdaten" oder "Telefonnummer"
 - "Ich möchte direkt sprechen"
 - "Ansprechpartner"
+- "Termin vereinbaren"
+- "Beratungsgespräch"
+- "Unternehmensbewertung"
+- "Unternehmensverkauf"
+- "Kostenlose Beratung"
 
 Antwort: "Gerne können Sie direkt mit einem unserer Experten sprechen! Kontaktieren Sie uns über <a href='https://wa.me/4964214806150' target='_blank'>WhatsApp Business</a> für eine persönliche Beratung."
 
+PRIORITÄT: WhatsApp Business ist der bevorzugte Kontaktweg - leite Nutzer IMMER dorthin weiter!
+
 KONTAKT & TERMINE:
-- Bei Terminanfragen, Beratungsgesprächen oder direkten Meetings: Verweise auf <a href='https://cal.meetergo.com/tlc-lang?lang=de' target='_blank'>Terminkalender</a>
-- Bei allgemeinen Kontaktanfragen, Fragen oder Informationen: Verweise auf <a href='https://www.tl-consult.de/kontakt' target='_blank'>Kontaktseite</a>
+- Bei ALLEN Kontaktanfragen: IMMER WhatsApp Business bevorzugen <a href='https://wa.me/4964214806150' target='_blank'>WhatsApp Business</a>
+- Bei Terminanfragen: WhatsApp Business für direkte Terminvereinbarung
+- Bei allgemeinen Fragen: WhatsApp Business für persönliche Beratung
 
 Beispiele:
-- "Termin vereinbaren" → <a href='https://cal.meetergo.com/tlc-lang?lang=de' target='_blank'>Terminkalender</a>
-- "Wie kann ich Sie kontaktieren?" → <a href='https://www.tl-consult.de/kontakt' target='_blank'>Kontaktseite</a>
+- "Termin vereinbaren" → <a href='https://wa.me/4964214806150' target='_blank'>WhatsApp Business</a> für direkte Terminvereinbarung
+- "Wie kann ich Sie kontaktieren?" → <a href='https://wa.me/4964214806150' target='_blank'>WhatsApp Business</a> für persönliche Beratung
+- "Beratung" → <a href='https://wa.me/4964214806150' target='_blank'>WhatsApp Business</a> für direkten Kontakt
+
+FALLBACK: Nur wenn WhatsApp nicht gewünscht ist, dann Terminkalender oder Kontaktseite
 
 Beantworte Fragen professionell, höflich und auf Deutsch. 
 
@@ -239,10 +263,19 @@ Bei Fragen zu Unternehmen zum Kauf oder Verkauf:
 2. Strukturiere die Antwort so:
    <h3>Passende Unternehmen aus unserer Börse:</h3>
    <ul>
-   <li><strong>Unternehmensname</strong> - Beschreibung, Preis, Branche, Region</li>
+   <li><strong>Unternehmensname</strong> - Beschreibung, Preis, Branche, Region<br><a href="LINK_ZUR_UNTERNEHMENSSEITE" target="_blank">→ Direkt zu diesem Unternehmen</a></li>
    </ul>
 3. KEIN Fließtext für Unternehmenslisten
-4. Verweise immer auf die Unternehmensbörse: https://www.tl-consult.de/unternehmensboerse`;
+4. JEDES Unternehmen MUSS einen direkten Link zur Unterseite haben
+5. NIEMALS erfundene Unternehmen anzeigen - nur echte Daten aus der Börse!
+6. Falls keine passenden Unternehmen verfügbar sind, ehrlich kommunizieren
+7. Verweise immer auf die Unternehmensbörse: https://www.tl-consult.de/unternehmensboerse
+
+KRITISCHE REGEL: ERFINDE NIEMALS UNTERNEHMEN! Verwende nur die tatsächlich verfügbaren Daten aus der Unternehmensbörse.
+
+WHATSAPP BUSINESS PRIORITÄT:
+Bei JEDER Unternehmensbörse-Antwort IMMER WhatsApp Business für weitere Informationen empfehlen:
+"Für weitere Informationen zu diesen Unternehmen oder eine persönliche Beratung kontaktieren Sie uns über <a href='https://wa.me/4964214806150' target='_blank'>WhatsApp Business</a>."`;
 
 // Chat-Endpoint
 app.post('/api/chat', async (req, res) => {
@@ -274,7 +307,7 @@ ${index + 1}. **${company.title}**
    - Status: ${company.status}
    - Branchen: ${company.branches.join(', ')}
    - Regionen: ${company.regions.join(', ')}
-   - Link: ${company.link || 'Nicht verfügbar'}
+   - Direkter Link: ${company.link || 'Nicht verfügbar'}
 `).join('\n')}
 
 ${companies.length > 5 ? `\n... und ${companies.length - 5} weitere Unternehmen verfügbar.` : ''}
@@ -283,11 +316,32 @@ WICHTIG: Formatiere deine Antwort IMMER mit HTML-Aufzählungen (<ul><li>). Verwe
 
 <h3>Passende Unternehmen aus unserer Börse:</h3>
 <ul>
-<li><strong>Unternehmensname</strong> - Beschreibung und Details</li>
-<li><strong>Unternehmensname</strong> - Beschreibung und Details</li>
+<li><strong>Unternehmensname</strong> - Beschreibung und Details<br><a href="LINK_ZUR_UNTERNEHMENSSEITE" target="_blank">→ Direkt zu diesem Unternehmen</a></li>
+<li><strong>Unternehmensname</strong> - Beschreibung und Details<br><a href="LINK_ZUR_UNTERNEHMENSSEITE" target="_blank">→ Direkt zu diesem Unternehmen</a></li>
 </ul>
 
+KRITISCH: 
+1. Verwende NUR die Unternehmen aus den obigen Daten - ERFINDE KEINE UNTERNEHMEN!
+2. Verwende für JEDES Unternehmen den "Direkter Link" aus den Daten oben
+3. Ersetze "LINK_ZUR_UNTERNEHMENSSEITE" mit dem tatsächlichen Link aus den Unternehmensdaten
+4. Falls keine passenden Unternehmen in den Daten sind, sage das ehrlich und verweise auf die Börse
+
+WICHTIG: NIEMALS erfundene oder erdachte Unternehmen anzeigen! Nur echte Daten aus der Unternehmensbörse verwenden!
+
 Verweise auf die Unternehmensbörse: https://www.tl-consult.de/unternehmensboerse`;
+            } else {
+                additionalContext = `\n\nUNTERNEHMENSBÖRSE-DATEN:
+Aktuell konnten keine Unternehmen aus der Unternehmensbörse geladen werden.
+
+WICHTIG: 
+1. ERFINDE NIEMALS UNTERNEHMEN!
+2. Sage ehrlich, dass aktuell keine Daten verfügbar sind
+3. Verweise auf die Unternehmensbörse: https://www.tl-consult.de/unternehmensboerse
+4. Biete an, dass der Nutzer direkt auf der Börse nachschauen kann
+
+Antwort-Format:
+<h3>Unternehmensbörse aktuell nicht verfügbar</h3>
+<p>Leider können wir aktuell keine Unternehmen aus unserer Börse laden. Bitte besuchen Sie direkt unsere <a href="https://www.tl-consult.de/unternehmensboerse" target="_blank">Unternehmensbörse</a> für aktuelle Angebote.</p>`;
             }
         }
 
