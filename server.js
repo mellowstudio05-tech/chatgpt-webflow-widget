@@ -13,7 +13,6 @@ app.use(cors({
     origin: [
         'https://www.tl-consult.de',
         'https://tl-consult.de',
-        'https://tl-consult.webflow.io',
         'http://localhost:3000',
         'file://'
     ],
@@ -26,8 +25,8 @@ const openai = new OpenAI({
     apiKey: process.env.OPENAI_API_KEY
 });
 
-// Erlaubte URLs für Scraping
-const ALLOWED_URLS = [
+// TL Consult URLs für Web-Scraping
+const TL_CONSULT_URLS = [
     'https://www.tl-consult.de/',
     'https://www.tl-consult.de/leistungen/unternehmensverkauf',
     'https://www.tl-consult.de/unternehmensboerse',
@@ -35,298 +34,259 @@ const ALLOWED_URLS = [
     'https://www.tl-consult.de/netzwerk',
     'https://www.tl-consult.de/neuigkeiten',
     'https://www.tl-consult.de/podcast',
-    'https://www.tl-consult.de/kontakt',
-    'https://www.tl-consult.de/fusszeile/impressum'
+    'https://www.tl-consult.de/kontakt'
 ];
 
-// Web-Scraping Funktionen
-async function scrapeUnternehmensboerse() {
-    try {
-        console.log('Starte Scraping der Unternehmensbörse...');
-        
-        // Versuche zuerst die Hauptseite zu scrapen
-        const response = await axios.get('https://www.tl-consult.de/', {
-            headers: {
-                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
-            }
-        });
-        
-        const $ = cheerio.load(response.data);
-        const companies = [];
-        
-        console.log('HTML geladen, suche nach Unternehmen...');
-        
-        // Suche nach Unternehmen in verschiedenen Bereichen der Seite
-        const companySelectors = [
-            'div[class*="company"]',
-            'div[class*="unternehmen"]',
-            'div[class*="börse"]',
-            'div[class*="boerse"]',
-            'div[class*="listing"]',
-            'div[class*="item"]',
-            'section[class*="company"]',
-            'section[class*="unternehmen"]'
-        ];
-        
-        let foundCompanies = 0;
-        
-        // Durchsuche alle möglichen Selektoren
-        companySelectors.forEach(selector => {
-            $(selector).each((index, element) => {
-                const $el = $(element);
-                const text = $el.text().trim();
-                
-                // Prüfe auf Unternehmensmuster
-                if (text.includes('Hersteller von') || 
-                    text.includes('Anbieter im') || 
-                    text.includes('Unternehmen im Bereich') ||
-                    text.includes('gesucht') ||
-                    text.includes('sucht einen Nachfolger') ||
-                    text.includes('Gebäudesicherheitstechnik')) {
-                    
-                    const lines = text.split('\n').filter(line => line.trim().length > 5);
-                    if (lines.length >= 2) {
-                        const title = lines[0].trim();
-                        const description = lines[1].trim();
-                        
-                        // Validiere den Titel
-                        if (title.length > 10 && title.length < 200 && 
-                            !title.includes('Weitere Informationen') &&
-                            !title.includes('Zur Unternehmensbörse') &&
-                            !companies.some(c => c.title === title)) {
-                            
-                            companies.push({
-                                title: title,
-                                description: description,
-                                price: text.includes('6.000.000€') ? '6.000.000€' : 'Preis auf Anfrage',
-                                date: extractDate(text) || new Date().toLocaleDateString('de-DE'),
-                                status: text.includes('gesucht') ? 'Kauf' : 'Verkauf',
-                                branches: extractBranches(text),
-                                regions: extractRegions(text),
-                                link: "https://www.tl-consult.de/unternehmensboerse"
-                            });
-                            
-                            foundCompanies++;
-                            console.log(`Unternehmen gefunden: ${title}`);
-                        }
-                    }
-                }
-            });
-        });
-        
-        // Fallback: Durchsuche alle divs nach Unternehmensmustern
-        if (foundCompanies === 0) {
-            console.log('Keine Unternehmen mit Selektoren gefunden, durchsuche alle divs...');
-            
-            $('div').each((index, element) => {
-                const $el = $(element);
-                const text = $el.text().trim();
-                
-                if (text.includes('Hersteller von Sanitärarmaturen') ||
-                    text.includes('Anbieter im Baby- und Familiensegment') ||
-                    text.includes('Unternehmen im Bereich B2B-Software') ||
-                    text.includes('Gebäudesicherheitstechnik')) {
-                    
-                    const lines = text.split('\n').filter(line => line.trim().length > 5);
-                    if (lines.length >= 2) {
-                        const title = lines[0].trim();
-                        const description = lines[1].trim();
-                        
-                        if (title.length > 10 && !companies.some(c => c.title === title)) {
-                            companies.push({
-                                title: title,
-                                description: description,
-                                price: text.includes('6.000.000€') ? '6.000.000€' : 'Preis auf Anfrage',
-                                date: extractDate(text) || new Date().toLocaleDateString('de-DE'),
-                                status: text.includes('gesucht') ? 'Kauf' : 'Verkauf',
-                                branches: extractBranches(text),
-                                regions: extractRegions(text),
-                                link: "https://www.tl-consult.de/unternehmensboerse"
-                            });
-                            
-                            foundCompanies++;
-                            console.log(`Fallback Unternehmen gefunden: ${title}`);
-                        }
-                    }
-                }
-            });
-        }
-        
-        console.log(`Insgesamt ${companies.length} Unternehmen gefunden`);
-        return companies;
-        
-    } catch (error) {
-        console.error('Fehler beim Scraping der Unternehmensbörse:', error);
-        return [];
-    }
-}
-
-// Hilfsfunktionen für Datenextraktion
-function extractDate(text) {
-    const dateMatch = text.match(/(\d{1,2}\.\d{1,2}\.\d{4})/);
-    return dateMatch ? dateMatch[1] : null;
-}
-
-function extractBranches(text) {
-    const branches = [];
-    if (text.includes('Produktion')) branches.push('Produktion');
-    if (text.includes('Handwerk')) branches.push('Handwerk');
-    if (text.includes('Dienstleistungen')) branches.push('Dienstleistungen');
-    if (text.includes('IT')) branches.push('IT');
-    if (text.includes('Handel')) branches.push('Handel');
-    return branches;
-}
-
-function extractRegions(text) {
-    const regions = [];
-    if (text.includes('Polen')) regions.push('Polen');
-    if (text.includes('Deutschland')) regions.push('Deutschland');
-    if (text.includes('Ausland')) regions.push('Ausland');
-    return regions;
-}
-
-// Funktion zur Erkennung von Unternehmenssuche-Fragen
-function isCompanySearchQuery(message) {
-    const searchKeywords = [
-        'unternehmen', 'firma', 'betrieb', 'kauf', 'verkauf', 'nachfolge',
-        'unternehmensbörse', 'börse', 'angebot', 'gesucht', 'suche',
-        'branche', 'branchen', 'region', 'standort', 'preis', 'bewertung'
-    ];
+// Web-Scraping Funktion
+async function scrapeTLConsultContent() {
+    const content = [];
     
-    const lowerMessage = message.toLowerCase();
-    return searchKeywords.some(keyword => lowerMessage.includes(keyword));
+    for (const url of TL_CONSULT_URLS) {
+        try {
+            const response = await axios.get(url, {
+                timeout: 10000,
+                headers: {
+                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+                }
+            });
+            
+            const $ = cheerio.load(response.data);
+            
+            // Spezielle Behandlung für Unternehmensbörse-Seite
+            if (url.includes('unternehmensboerse')) {
+                const companyListings = [];
+                
+                // Extrahiere Unternehmensangebote mit der korrekten HTML-Struktur
+                $('.w-layout-grid.grid-16-b-rse').each((index, element) => {
+                    const companyContainer = $(element);
+                    
+                    // Unternehmensname extrahieren
+                    const companyName = companyContainer.find('[fs-cmsfilter-field="name"]').text().trim();
+                    
+                    // Gesucht/Verkauft Status extrahieren
+                    const status = companyContainer.find('[fs-cmsfilter-field="Gesucht"]').text().trim();
+                    
+                    // Datum extrahieren
+                    const date = companyContainer.find('div[id*="w-node"]').text().trim();
+                    
+                    // Beschreibung extrahieren
+                    const description = companyContainer.find('[fs-cmsfilter-field="Beschreibung"]').text().trim();
+                    
+                    // Preis extrahieren (falls vorhanden)
+                    const price = companyContainer.find('[fs-cmssort-field="Preis"]').text().trim();
+                    
+                    if (companyName) {
+                        companyListings.push({
+                            name: companyName,
+                            status: status,
+                            date: date,
+                            description: description,
+                            price: price,
+                            fullText: companyContainer.text().replace(/\s+/g, ' ').trim()
+                        });
+                    }
+                });
+                
+                const pageContent = {
+                    url: url,
+                    title: $('title').text().trim(),
+                    content: $('body').text().replace(/\s+/g, ' ').trim(),
+                    companyListings: companyListings
+                };
+                
+                content.push(pageContent);
+                console.log(`Content scraped from: ${url} (${companyListings.length} Unternehmensangebote gefunden)`);
+            } else {
+                // Standard-Scraping für andere Seiten
+                $('script, style, nav, footer, header').remove();
+                
+                const pageContent = {
+                    url: url,
+                    title: $('title').text().trim(),
+                    content: $('body').text().replace(/\s+/g, ' ').trim()
+                };
+                
+                content.push(pageContent);
+                console.log(`Content scraped from: ${url}`);
+            }
+            
+        } catch (error) {
+            console.error(`Error scraping ${url}:`, error.message);
+        }
+    }
+    
+    return content;
 }
 
-// System-Prompt für TL Consult - Unternehmensnachfolge
-const SYSTEM_PROMPT = `Du bist der Chat-Assistent von TL Consult M&A GmbH, einem spezialisierten Beratungsunternehmen für Unternehmensnachfolge im Mittelstand.
+// Cache für gescrapte Inhalte
+let scrapedContent = null;
+let lastScrapeTime = 0;
+const CACHE_DURATION = 24 * 60 * 60 * 1000; // 24 Stunden
 
-   UNTERNEHMENSINFORMATIONEN:
-   - Firma: TLC M&A GmbH
-   - Website: https://www.tl-consult.de
-   - Standort: Lokschuppen Marburg, Rudolf-Bultmann-Str. 4h, 35039 Marburg
-   - Handelsregister: HRB 4773, Registergericht: Marburg
-   - Geschäftsführer: Timo Lang
-   - Telefon: +49 6465 913 848 (oder (+49) 0 6421 / 480 615 – 0)
-   - Fax: +49 6465 913 849
-   - Email: info@tl-consult.de
-   - WhatsApp Business verfügbar
-   - Umsatzsteuer-ID: DE812598354
+// Funktion zum Abrufen der aktuellen Inhalte
+async function getCurrentContent() {
+    const now = Date.now();
+    
+    if (!scrapedContent || (now - lastScrapeTime) > CACHE_DURATION) {
+        console.log('Scraping fresh content...');
+        scrapedContent = await scrapeTLConsultContent();
+        lastScrapeTime = now;
+    }
+    
+    return scrapedContent;
+}
+
+// System-Prompt für TL Consult - M&A Beratung
+const SYSTEM_PROMPT = `Du bist der freundliche und professionelle KI-Assistent von TL Consult M&A GmbH. Du sprichst immer in der Sie-Form und bist zuvorkommend, hilfsbereit und professionell.
+
+UNTERNEHMENSINFORMATIONEN:
+- Firma: TLC M&A GmbH
+- Website: https://www.tl-consult.de
+- Standort: Lokschuppen Marburg, Rudolf-Bultmann-Str. 4h, 35039 Marburg
+- Telefon: (+49) 0 6421 / 480 615 – 0
+- Email: info@tl-consult.de
+- WhatsApp Business: +496421 480 615 – 0
+- Spezialisierung: Unternehmensnachfolge im Mittelstand
 
 UNSERE KERNDIENSTLEISTUNGEN:
-• UNTERNEHMENSVERKAUF
-   - Professionelle Begleitung des Verkaufsprozesses
-   - Erstellung von Exposés und Unternehmensbewertungen
-   - Diskretion und Anonymität gewährleistet
-   - Über 2.500 geprüfte Kaufinteressenten in unserer Datenbank
-   - Erfolgsbezogenes Vergütungsmodell
 
-• UNTERNEHMENSBEWERTUNG
-   - Marktgerechte Bewertung nach aktuellen Standards
-   - Kaufpreisermittlung für Lebenswerk
-   - Transparente Bewertungsmethoden
-   - Link: https://www.tl-consult.de/leistungen/unternehmensverkauf
+1. UNTERNEHMENSVERKAUF
+   - Professionelle Begleitung beim Verkauf des Lebenswerks
+   - Strukturierte Vorbereitung der Transaktion
+   - Erstellung von Exposé und Unternehmensbewertung
+   - Anonyme Interessentensuche mit über 2.500 geprüften Kontakten
+   - Due Diligence Begleitung und Vertragsverhandlung
+   - Diskretion und Vertraulichkeit als oberstes Gebot
 
-• UNTERNEHMENSBÖRSE
-   - Ausgewählte Verkaufsangebote und Kaufgesuche
-   - DACH-Region (Deutschland, Österreich, Schweiz)
-   - Matching-System für Käufer und Verkäufer
-   - Link: https://www.tl-consult.de/unternehmensboerse
+2. UNTERNEHMENSBEWERTUNG
+   - Marktgerechte Bewertung nach aktuellen geprüften Standards
+   - Objektivierte Wertermittlung für verschiedene Anlässe
+   - Ankering-Effekt für realistische Kaufpreiserwartungen
+   - Grundlage für Finanzierungsgespräche der Käufer
 
-• UNTERNEHMENSKAUF
-   - Beratung für Existenzgründer (MBI)
-   - Unterstützung bei MBO-Prozessen
+3. UNTERNEHMENSBÖRSE
+   - Ausgewählte Verkaufsangebote und Kaufgesuche aus der DACH-Region
+   - Qualifizierte Kontakte und geprüfte Interessenten
+   - Matching-System für passende Transaktionen
+   - Regelmäßig aktualisierte Angebote
+
+4. UNTERNEHMENSKAUF
+   - Unterstützung bei der Suche nach dem passenden Unternehmen
+   - MBI (Management Buy-In) Beratung
    - Beteiligungsgesellschaften und Family Offices
+   - Strategische Investoren
 
-BEREIT!-INITIATIVE:
-TLC ist Teil der BEREIT! Initiative für Unternehmensnachfolge. Wir bieten:
-- BEREIT!-Workbook mit wertvollem Wissen und Tipps
-- Kostenlose Checklisten (Due Diligence, Verhandlungsvorbereitung, Dos-and-Donts, etc.)
-- Hilfreiche Tools (SWOT-Analyse, Business Model Canvas, SMART-Analyse, etc.)
-- YouTube-Kanal "BEREIT! zur Nachfolge" mit Expertenvideos
-- Podcast "Experten-Talk zum Thema Unternehmensverkauf"
-- Nachfolge-Akademie in verschiedenen Städten
-- Link: https://www.tl-consult.de/bereit
+5. NETZWERK & BERATUNG
+   - Umfassende M&A-Beratung für den Mittelstand
+   - Kontakte zu erfahrenen Juristen und Spezialisten
+   - Lösungsanbieter für Pensionsverpflichtungen
+   - Internationales Netzwerk mit Partnern in Polen
 
-FACHBEGRIFFE & GLOSSAR:
-Für alle Fachbegriffe der Unternehmensnachfolge bieten wir ein umfassendes Glossar von A bis Z mit über 100 Definitionen:
-- Due Diligence, Asset Deal, Share Deal, MBI, MBO, BIMBO
-- Kaufpreisermittlung, Cash Flow, DCF-Verfahren, Goodwill
-- Exit-Strategien, Going Concern, Change of Control
-- Vertragsgestaltung, Covenants, Closing, Signing
-- Link: https://www.tl-consult.de/glossar
+UNSER ANSPRUCH:
+"Die beste Käuferin / den besten Käufer für Ihr Unternehmen zu finden. Wenn das auch Ihr Anspruch ist, dann sollten wir uns kennenlernen."
 
-VERKAUFSPROZESS (5 Phasen):
-• Erstes Gespräch - Unverbindliche Beratung
-• Vorbereitung - Exposé, Bewertung, Kurzprofil
-• Interessentensuche - Diskretes Matching
-• Verhandlungen - LOI, Due Diligence, Kaufvertrag
-• Übergabe - Vertragsabschluss und Nachbetreuung
+UNSER LEITBILD:
+- Vertrauen ist die Basis unseres Erfolgs
+- Ihr Unternehmen ist einzigartig
+- Wir würdigen Ihr Lebenswerk mit einem angemessenen Kaufpreis
+- Wir gewährleisten das erfolgreiche Fortbestehen Ihres Unternehmens
+- Diskretion ist für uns eine Selbstverständlichkeit
 
-HÄUFIGE FRAGEN:
-- "Wie lange dauert ein Unternehmensverkauf?" → 6-18 Monate je nach Komplexität
-- "Was kostet die Beratung?" → Erfolgsbezogenes Vergütungsmodell
-- "Wie diskret ist der Prozess?" → Höchste Diskretion gewährleistet
-- "Wer sind typische Käufer?" → MBI, MBO, Beteiligungsgesellschaften, Strategen
+HÄUFIGE FRAGEN ZUM UNTERNEHMENSVERKAUF:
 
-WICHTIG - KONTAKT & BERATUNG:
-Bei folgenden Anfragen biete IMMER WhatsApp Business an (höchste Priorität):
-- Persönliche Beratung oder Gespräch mit einem Menschen
-- "Wie kann ich euch erreichen?"
-- "Wie ist die Nummer für WhatsApp?"
-- "Kontaktdaten" oder "Telefonnummer"
-- "Ich möchte direkt sprechen"
-- "Ansprechpartner"
-- "Termin vereinbaren"
-- "Beratungsgespräch"
-- "Unternehmensbewertung"
-- "Unternehmensverkauf"
-- "Kostenlose Beratung"
+KAUFPREIS:
+- "Wird mein Lebenswerk gewürdigt?"
+- "Reicht der Kaufpreis aus, meinen Lebensstandard zu gewährleisten?"
+→ Verweise auf Unternehmensbewertung
 
-Antwort: "Gerne können Sie direkt mit einem unserer Experten sprechen! Kontaktieren Sie uns über <a href='https://wa.me/4964214806150' target='_blank'>WhatsApp Business</a> für eine persönliche Beratung."
+EMOTIONALES LÖSEN:
+- "Bin ich bereit? Ist mein Unternehmen bereit?"
+- "Was ändert sich nach dem Unternehmensverkauf?"
+→ Verweise auf Beratungsgespräch
 
-PRIORITÄT: WhatsApp Business ist der bevorzugte Kontaktweg - leite Nutzer IMMER dorthin weiter!
+ZEITPUNKT:
+- "Wann ist der richtige Zeitpunkt zum Unternehmensverkauf?"
+- "Wie lange dauert ein Verkaufsprozess?"
+→ Verweise auf frühzeitige Planung
 
-KONTAKT & TERMINE:
-- Bei ALLEN Kontaktanfragen: IMMER WhatsApp Business bevorzugen <a href='https://wa.me/4964214806150' target='_blank'>WhatsApp Business</a>
-- Bei Terminanfragen: WhatsApp Business für direkte Terminvereinbarung
-- Bei allgemeinen Fragen: WhatsApp Business für persönliche Beratung
+WEITERFÜHRUNG:
+- "Wie wird mein Unternehmen weitergeführt?"
+- "Was erwarte ich von der Käuferseite?"
+- "Wer passt zu meinem Unternehmen?"
+- "MBI/MBO, Beteiligungsgesellschaften oder strategische Investoren?"
+→ Verweise auf Interessentensuche
 
-Beispiele:
-- "Termin vereinbaren" → <a href='https://wa.me/4964214806150' target='_blank'>WhatsApp Business</a> für direkte Terminvereinbarung
-- "Wie kann ich Sie kontaktieren?" → <a href='https://wa.me/4964214806150' target='_blank'>WhatsApp Business</a> für persönliche Beratung
-- "Beratung" → <a href='https://wa.me/4964214806150' target='_blank'>WhatsApp Business</a> für direkten Kontakt
+VERKAUFSPROZESS (6 Phasen):
 
-FALLBACK: Nur wenn WhatsApp nicht gewünscht ist, dann Terminkalender oder Kontaktseite
+1. DAS ERSTE GESPRÄCH
+   - Unverbindliches Kennenlernen
+   - Vorstellung unserer Herangehensweise
+   - Einschätzung zu Ihrem Unternehmen und Verkaufschancen
+   - Transparentes erfolgsbezogenes Vergütungsmodell
+   - Diskretion als Selbstverständlichkeit
 
-Beantworte Fragen professionell, höflich und auf Deutsch. 
+2. DIE VORBEREITUNG DER TRANSAKTION
+   - Erstellung von Exposé, Unternehmensbewertung und anonymem Kurzprofil
+   - Anforderungsliste für Due Diligence Vorbereitung
+   - Marktgerechte Bewertung mit Kaufpreisangabe
+   - Ankering-Effekt für Verhandlungen
+
+3. DIE INTERESSENTENSUCHE
+   - Matching in unserer Datenbank mit über 2.500 geprüften Kaufinteressenten
+   - Anonyme Darstellung des Verkaufsobjekts
+   - Qualifizierte Kontakte und Diskretion
+   - Existenzgründer (MBI), strategische Investoren, Family Offices
+
+4. DIE VERHANDLUNG
+   - Präzisierung von Kaufpreis und Übergabestichtag
+   - Verhandlung über Garantien
+   - Beratungsphase nach Verkauf
+   - Letter of Intent (LOI) Vorbereitung
+
+5. DIE ÜBERGABE
+   - Vertragsabschluss und Kaufpreiszahlung
+   - Handelsregister-Eintragungen
+   - Ordentliche Übergabe an den Käufer
+   - Einarbeitung des neuen Geschäftsführers
+   - Beratende Funktion des Alt-Unternehmers
+
+6. IHRE VORTEILE
+   - Professionelle Beratung und Begleitung
+   - Fokus auf das originäre Geschäft
+   - Strukturierter Verkaufsprozess
+   - Hohe Diskretion
+   - Geprüfte Kaufinteressenten
+   - Moderationskompetenz bei Spannungen
+   - Starkes Netzwerk
+   - Sichere Datenräume
+
+KONTAKTINFORMATIONEN:
+- Haupttelefon: (+49) 0 6421 / 480 615 – 0
+- Email: info@tl-consult.de
+- WhatsApp Business: +496421 480 615 – 0
+- Adresse: Lokschuppen Marburg, Rudolf-Bultmann-Str. 4h, 35039 Marburg
 
 WICHTIG: Verwende Links in deinen Antworten, um Nutzer zu den relevanten Seiten zu leiten:
 
-- Bei Fragen zu Unternehmensverkauf: Verweise auf https://www.tl-consult.de/leistungen/unternehmensverkauf
-- Bei Fragen zur Unternehmensbörse: Verweise auf https://www.tl-consult.de/unternehmensboerse  
-   - Bei Fragen über das Unternehmen: Verweise auf https://www.tl-consult.de/uber-uns
-   - Bei Neuigkeiten/Updates: Verweise auf https://www.tl-consult.de/neuigkeiten
-   - Bei Kontaktfragen: Verweise auf https://www.tl-consult.de/kontakt
-   - Bei rechtlichen Fragen oder Impressum: Verweise auf https://www.tl-consult.de/fusszeile/impressum
-   - Bei Fragen zu BEREIT!-Initiative, Workbooks, Checklisten und Tools: Verweise auf https://www.tl-consult.de/bereit
-   - Bei Fragen zu Fachbegriffen und Definitionen der Unternehmensnachfolge: Verweise auf https://www.tl-consult.de/glossar
-   - Bei aktuellen News und Updates: Verweise auf https://www.linkedin.com/company/tlc-marburg/posts/?feedView=all
+- Bei Fragen zum Unternehmensverkauf: Verweise auf https://www.tl-consult.de/leistungen/unternehmensverkauf
+- Bei Fragen zur Unternehmensbörse: Verweise auf https://www.tl-consult.de/unternehmensboerse
+- Bei Fragen zu uns: Verweise auf https://www.tl-consult.de/uber-uns
+- Bei Fragen zum Netzwerk: Verweise auf https://www.tl-consult.de/netzwerk
+- Bei Kontaktfragen: Verweise auf https://www.tl-consult.de/kontakt
+- Bei allgemeinen Fragen: Verweise auf https://www.tl-consult.de
 
 Format für Links: <a href="URL" target="_blank">Link-Text</a>
-Beispiel: "Weitere Informationen finden Sie auf unserer <a href='https://www.tl-consult.de/leistungen/unternehmensverkauf' target='_blank'>Seite zum Unternehmensverkauf</a>."
 
 FORMATIERUNG: Verwende IMMER strukturierte Antworten mit HTML-Formatierung:
 
-WICHTIG: Bei JEDER Antwort MUSS HTML verwendet werden - KEIN Fließtext!
+WICHTIG: Bei jeder Antwort mit Listen oder Strukturierung MUSS HTML verwendet werden:
 
-- Für Überschriften mit Einleitung: <h3>Überschrift</h3><p>Einleitungstext</p>
+- Für Überschriften: <h3>Überschrift</h3>
 - Für Aufzählungen: <ul><li><strong>Titel</strong> - Beschreibung</li></ul>
 - Für wichtige Texte: <strong>Wichtiger Text</strong>
-- Für Absätze: <p>Text mit Zeilenumbruch</p>
+- Für Absätze: <p>Text</p>
 
-KRITISCHE REGEL: Formatiere ALLE Antworten mit strukturierten HTML-Aufzählungen. Verwende NIEMALS Fließtext für Listen oder mehrere Punkte.
-
-MUSTER für ALLE Antworten:
+MUSTER für alle strukturierten Antworten:
 "<h3>Überschrift der Antwort:</h3>
 <p>Einleitungstext der erklärt, was folgt.</p>
 
@@ -336,37 +296,51 @@ MUSTER für ALLE Antworten:
 <li><strong>Punkt 3</strong> - Detaillierte Beschreibung des dritten Punktes</li>
 </ul>"
 
-Beispiel für "Was macht euch einzigartig?":
-"<h3>Unsere Einzigartigkeit:</h3>
-<p>Unsere Einzigartigkeit basiert auf mehreren Faktoren:</p>
+Beispiel für Unternehmensbörse:
+"<h3>Aktuelle Unternehmensangebote:</h3>
+<p>In unserer Unternehmensbörse finden Sie derzeit folgende Angebote:</p>
 
 <ul>
-<li><strong>Spezialisierung auf Unternehmensnachfolge im Mittelstand:</strong> Wir sind Experten für Unternehmensverkauf und -bewertung im Mittelstand und konzentrieren uns ausschließlich auf diesen Bereich.</li>
-<li><strong>Über 2.500 geprüfte Kaufinteressenten:</strong> Unsere umfangreiche Datenbank ermöglicht es uns, den richtigen Käufer für Ihr Unternehmen zu finden.</li>
-<li><strong>Erfolgsbezogenes Vergütungsmodell:</strong> Wir verdienen nur, wenn Sie erfolgreich verkaufen - das sorgt für maximale Motivation.</li>
+<li><strong>Hersteller von Sanitärarmaturen</strong> - Polnischer Betrieb sucht Nachfolger, 8.11.2025</li>
+<li><strong>Anbieter im Baby- und Familiensegment</strong> - Wachstumsstarker Anbieter mit hoher Markenbekanntheit, 20.8.2025</li>
+<li><strong>B2B-Software Unternehmen gesucht</strong> - Langfristige Weiterentwicklung geplant, 24.6.2025</li>
+</ul>
+
+<p>Alle aktuellen Angebote finden Sie unter: <a href='https://www.tl-consult.de/unternehmensboerse' target='_blank'>Unternehmensbörse</a></p>"
+
+ANTWORTREGELN:
+- Verwende IMMER die strukturierte HTML-Formatierung mit <h3>, <ul>, <li>, <strong>
+- Gib NIEMALS nur eine Liste von Links aus
+- Bei Unternehmensangeboten: Zeige die aktuellen, spezifischen Angebote mit Details an
+- Bei Kontaktanfragen: Gib die spezifischen Telefonnummern und E-Mails an
+- Bei Dienstleistungen: Erkläre die konkreten Angebote, nicht nur Links
+- Verwende die gescrapten Website-Inhalte für detaillierte, aktuelle Informationen
+
+VERBOTEN:
+- Generische Link-Listen ohne Erklärung
+- "Hier sind die Links..." Antworten
+- Vage Beschreibungen ohne konkrete Details
+
+RICHTIGE ANTWORTEN (Beispiele):
+
+Frage: "Welche Unternehmen sind in der Börse?"
+Antwort: "<h3>Aktuelle Unternehmensangebote:</h3>
+<p>In unserer Unternehmensbörse finden Sie derzeit folgende Angebote:</p>
+<ul>
+<li><strong>Hersteller von Sanitärarmaturen für den öffentlichen Bereich</strong> - Polnischer Betrieb sucht Nachfolger, 8.11.2025</li>
+<li><strong>Anbieter im Baby- und Familiensegment</strong> - Wachstumsstarker Anbieter mit hoher Markenbekanntheit, 20.8.2025</li>
 </ul>"
 
-Empfehle bei komplexen Anfragen ein unverbindliches Beratungsgespräch.
+Frage: "Wie kann ich TL Consult kontaktieren?"
+Antwort: "<h3>Kontaktmöglichkeiten:</h3>
+<p>Sie können TL Consult auf verschiedene Weise erreichen:</p>
+<ul>
+<li><strong>Telefon:</strong> (+49) 0 6421 / 480 615 – 0</li>
+<li><strong>E-Mail:</strong> info@tl-consult.de</li>
+<li><strong>WhatsApp Business:</strong> +496421 480 615 – 0</li>
+</ul>"
 
-UNTERNEHMENSBÖRSE-ANTWORTEN:
-Bei Fragen zu Unternehmen zum Kauf oder Verkauf:
-1. Verwende IMMER HTML-Aufzählungen (<ul><li>)
-2. Strukturiere die Antwort so:
-   <h3>Passende Unternehmen aus unserer Börse:</h3>
-   <ul>
-   <li><strong>Unternehmensname</strong> - Beschreibung, Preis, Branche, Region<br><a href="LINK_ZUR_UNTERNEHMENSSEITE" target="_blank">→ Direkt zu diesem Unternehmen</a></li>
-   </ul>
-3. KEIN Fließtext für Unternehmenslisten
-4. JEDES Unternehmen MUSS einen direkten Link zur Unterseite haben
-5. NIEMALS erfundene Unternehmen anzeigen - nur echte Daten aus der Börse!
-6. Falls keine passenden Unternehmen verfügbar sind, ehrlich kommunizieren
-7. Verweise immer auf die Unternehmensbörse: https://www.tl-consult.de/unternehmensboerse
-
-KRITISCHE REGEL: ERFINDE NIEMALS UNTERNEHMEN! Verwende nur die tatsächlich verfügbaren Daten aus der Unternehmensbörse.
-
-WHATSAPP BUSINESS PRIORITÄT:
-Bei JEDER Unternehmensbörse-Antwort IMMER WhatsApp Business für weitere Informationen empfehlen:
-"Für weitere Informationen zu diesen Unternehmen oder eine persönliche Beratung kontaktieren Sie uns über <a href='https://wa.me/4964214806150' target='_blank'>WhatsApp Business</a>."`;
+Beantworte Fragen freundlich, professionell und hilfsbereit. Verwende immer die Sie-Form und sei zuvorkommend. Bei komplexen Anfragen biete gerne ein persönliches Beratungsgespräch an.`;
 
 // Chat-Endpoint
 app.post('/api/chat', async (req, res) => {
@@ -379,62 +353,29 @@ app.post('/api/chat', async (req, res) => {
             });
         }
 
-        let systemPrompt = SYSTEM_PROMPT;
-        let additionalContext = '';
-
-        // Prüfen ob es sich um eine Unternehmenssuche handelt
-        if (isCompanySearchQuery(message)) {
-            console.log('Unternehmenssuche erkannt, starte Scraping...');
-            const companies = await scrapeUnternehmensboerse();
+        // Aktuelle Website-Inhalte abrufen
+        const currentContent = await getCurrentContent();
+        
+        // Erstelle erweiterten System-Prompt mit aktuellen Inhalten
+        let enhancedSystemPrompt = SYSTEM_PROMPT + '\n\nAKTUELLE WEBSITE-INHALTE:\n';
+        
+        currentContent.forEach(page => {
+            enhancedSystemPrompt += `URL: ${page.url}\nTitel: ${page.title}\nInhalt: ${page.content.substring(0, 2000)}...\n\n`;
             
-            if (companies.length > 0) {
-                additionalContext = `\n\nAKTUELLE UNTERNEHMENSBÖRSE-DATEN:
-Hier sind die aktuell verfügbaren Unternehmen aus unserer Unternehmensbörse:
-
-${companies.slice(0, 5).map((company, index) => `
-${index + 1}. **${company.title}**
-   - Beschreibung: ${company.description}
-   - Preis: ${company.price}
-   - Status: ${company.status}
-   - Branchen: ${company.branches.join(', ')}
-   - Regionen: ${company.regions.join(', ')}
-   - Direkter Link: ${company.link || 'Nicht verfügbar'}
-`).join('\n')}
-
-${companies.length > 5 ? `\n... und ${companies.length - 5} weitere Unternehmen verfügbar.` : ''}
-
-WICHTIG: Formatiere deine Antwort IMMER mit HTML-Aufzählungen (<ul><li>). Verwende KEINEN Fließtext für die Unternehmensliste. Strukturiere die Antwort so:
-
-<h3>Passende Unternehmen aus unserer Börse:</h3>
-<ul>
-<li><strong>Unternehmensname</strong> - Beschreibung und Details<br><a href="LINK_ZUR_UNTERNEHMENSSEITE" target="_blank">→ Direkt zu diesem Unternehmen</a></li>
-<li><strong>Unternehmensname</strong> - Beschreibung und Details<br><a href="LINK_ZUR_UNTERNEHMENSSEITE" target="_blank">→ Direkt zu diesem Unternehmen</a></li>
-</ul>
-
-KRITISCH: 
-1. Verwende NUR die Unternehmen aus den obigen Daten - ERFINDE KEINE UNTERNEHMEN!
-2. Verwende für JEDES Unternehmen den "Direkter Link" aus den Daten oben
-3. Ersetze "LINK_ZUR_UNTERNEHMENSSEITE" mit dem tatsächlichen Link aus den Unternehmensdaten
-4. Falls keine passenden Unternehmen in den Daten sind, sage das ehrlich und verweise auf die Börse
-
-WICHTIG: NIEMALS erfundene oder erdachte Unternehmen anzeigen! Nur echte Daten aus der Unternehmensbörse verwenden!
-
-Verweise auf die Unternehmensbörse: https://www.tl-consult.de/unternehmensboerse`;
-            } else {
-                additionalContext = `\n\nUNTERNEHMENSBÖRSE-DATEN:
-Aktuell konnten keine Unternehmen aus der Unternehmensbörse geladen werden.
-
-WICHTIG: 
-1. ERFINDE NIEMALS UNTERNEHMEN!
-2. Sage ehrlich, dass aktuell keine Daten verfügbar sind
-3. Verweise auf die Unternehmensbörse: https://www.tl-consult.de/unternehmensboerse
-4. Biete an, dass der Nutzer direkt auf der Börse nachschauen kann
-
-Antwort-Format:
-<h3>Unternehmensbörse aktuell nicht verfügbar</h3>
-<p>Leider können wir aktuell keine Unternehmen aus unserer Börse laden. Bitte besuchen Sie direkt unsere <a href="https://www.tl-consult.de/unternehmensboerse" target="_blank">Unternehmensbörse</a> für aktuelle Angebote.</p>`;
+            // Füge strukturierte Unternehmensangebote hinzu, falls vorhanden
+            if (page.companyListings && page.companyListings.length > 0) {
+                enhancedSystemPrompt += `AKTUELLE UNTERNEHMENSANGEBOTE (${page.companyListings.length} Angebote):\n`;
+                page.companyListings.forEach((company, index) => {
+                    enhancedSystemPrompt += `${index + 1}. UNTERNEHMEN: ${company.name}`;
+                    if (company.status) enhancedSystemPrompt += ` - Status: ${company.status}`;
+                    if (company.date) enhancedSystemPrompt += ` - Datum: ${company.date}`;
+                    if (company.description) enhancedSystemPrompt += ` - Beschreibung: ${company.description}`;
+                    if (company.price) enhancedSystemPrompt += ` - Preis: ${company.price}`;
+                    enhancedSystemPrompt += '\n';
+                });
+                enhancedSystemPrompt += '\nWICHTIG: Verwende diese aktuellen Unternehmensangebote in deinen Antworten!\n\n';
             }
-        }
+        });
 
         // OpenAI API Aufruf
         const completion = await openai.chat.completions.create({
@@ -442,7 +383,7 @@ Antwort-Format:
             messages: [
                 {
                     role: 'system',
-                    content: systemPrompt + additionalContext
+                    content: enhancedSystemPrompt
                 },
                 {
                     role: 'user',
@@ -515,45 +456,65 @@ app.post('/api/chat-advanced', async (req, res) => {
     }
 });
 
-// Unternehmensbörse-Daten Endpoint
-app.get('/api/unternehmensboerse', async (req, res) => {
-    try {
-        console.log('API-Aufruf: Unternehmensbörse-Daten werden geladen...');
-        const companies = await scrapeUnternehmensboerse();
-        
-        console.log(`API-Antwort: ${companies.length} Unternehmen gefunden`);
-        companies.forEach((company, index) => {
-            console.log(`${index + 1}. ${company.title}`);
-        });
-        
-        res.json({ 
-            success: true, 
-            companies,
-            count: companies.length,
-            source: 'https://www.tl-consult.de/'
-        });
-    } catch (error) {
-        console.error('Fehler beim Laden der Unternehmensbörse:', error);
-        res.status(500).json({ 
-            success: false, 
-            error: 'Fehler beim Laden der Unternehmensbörse',
-            details: error.message
-        });
-    }
-});
-
 // Health Check Endpoint
 app.get('/health', (req, res) => {
     res.json({ status: 'OK', message: 'Server läuft' });
 });
 
+// Endpoint zum manuellen Aktualisieren der Inhalte
+app.post('/api/refresh-content', async (req, res) => {
+    try {
+        console.log('Manuelles Aktualisieren der Inhalte...');
+        scrapedContent = await scrapeTLConsultContent();
+        lastScrapeTime = Date.now();
+        
+        res.json({ 
+            status: 'OK', 
+            message: 'Inhalte erfolgreich aktualisiert',
+            pagesScraped: scrapedContent.length
+        });
+    } catch (error) {
+        console.error('Fehler beim Aktualisieren der Inhalte:', error);
+        res.status(500).json({ 
+            error: 'Fehler beim Aktualisieren der Inhalte' 
+        });
+    }
+});
+
+// Endpoint zum Abrufen der aktuellen Inhalte
+app.get('/api/content', async (req, res) => {
+    try {
+        const content = await getCurrentContent();
+        res.json({ 
+            status: 'OK', 
+            content: content,
+            lastUpdated: new Date(lastScrapeTime).toISOString()
+        });
+    } catch (error) {
+        console.error('Fehler beim Abrufen der Inhalte:', error);
+        res.status(500).json({ 
+            error: 'Fehler beim Abrufen der Inhalte' 
+        });
+    }
+});
+
 // Server starten
 app.listen(PORT, () => {
-    console.log(`Server läuft auf Port ${PORT}`);
-    console.log(`Chat-API verfügbar unter: http://localhost:${PORT}/api/chat`);
+    console.log(`🚀 ChatGPT Webflow Widget - TL Consult Server läuft auf Port ${PORT}`);
+    console.log(`💬 Chat-API verfügbar unter: http://localhost:${PORT}/api/chat`);
+    console.log(`🔄 Content-Refresh verfügbar unter: http://localhost:${PORT}/api/refresh-content`);
+    console.log(`📊 Content-Status verfügbar unter: http://localhost:${PORT}/api/content`);
     
     if (!process.env.OPENAI_API_KEY) {
         console.warn('⚠️  WARNUNG: OPENAI_API_KEY nicht gesetzt!');
     }
+    
+    // Initiales Scraping beim Start
+    console.log('🔄 Starte initiales Scraping der TL Consult-Website...');
+    getCurrentContent().then(() => {
+        console.log('✅ Initiales Scraping abgeschlossen');
+    }).catch(error => {
+        console.error('❌ Fehler beim initialen Scraping:', error.message);
+    });
 });
 
