@@ -144,7 +144,7 @@ const SYSTEM_PROMPT = `Du bist der freundliche und professionelle KI-Assistent v
 - Website: https://www.tl-consult.de
 - Standort: Lokschuppen Marburg, Rudolf-Bultmann-Str. 4h, 35039 Marburg
 - Telefon: (+49) 0 6421 / 480 615 – 0
-- Email: info@tl-consult.de
+- Email: marburg@tl-consult.de
 - WhatsApp Business: +496421 480 615 – 0
 - Spezialisierung: Unternehmensnachfolge im Mittelstand
 
@@ -262,7 +262,7 @@ VERKAUFSPROZESS (6 Phasen):
 
 KONTAKTINFORMATIONEN:
 - Haupttelefon: (+49) 0 6421 / 480 615 – 0
-- Email: info@tl-consult.de
+- Email: marburg@tl-consult.de
 - WhatsApp Business: +496421 480 615 – 0 (EMPFOHLEN für schnelle Kontaktaufnahme)
 - Terminbuchung: https://cal.meetergo.com/tlc-lang?lang=de (DIREKTE Terminbuchung online)
 - Adresse: Lokschuppen Marburg, Rudolf-Bultmann-Str. 4h, 35039 Marburg
@@ -349,7 +349,7 @@ Antwort: "<h3>Kontaktmöglichkeiten:</h3>
 <li><strong><a href='https://wa.me/4964214806150' target='_blank' style='color: #1a365d; text-decoration: underline;'>WhatsApp Business</a></strong> - +496421 480 615 – 0 (Empfohlen für schnelle Kontaktaufnahme)</li>
 <li><strong><a href='https://cal.meetergo.com/tlc-lang?lang=de' target='_blank' style='color: #1a365d; text-decoration: underline;'>Terminbuchung</a></strong> - Direkte Online-Terminbuchung (Empfohlen für Beratungsgespräche)</li>
 <li><strong>Telefon:</strong> (+49) 0 6421 / 480 615 – 0</li>
-<li><strong>E-Mail:</strong> info@tl-consult.de</li>
+<li><strong>E-Mail:</strong> marburg@tl-consult.de</li>
 </ul>
 <p>Über WhatsApp Business können Sie direkt und unkompliziert mit uns in Kontakt treten! Für ein persönliches Beratungsgespräch können Sie direkt einen Termin buchen.</p>"
 
