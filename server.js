@@ -712,14 +712,91 @@ Antwort: {
     "confidence": 0.95
 }
 
-Anfrage: "B2B Marktführer"
+Anfrage: "Ich suche Unternehmen die zum Kauf stehen"
 Antwort: {
-    "interpretation": "Suche nach marktführenden B2B-Unternehmen",
-    "filters": ["Branche: B2B", "Unternehmensgröße: Marktführer"],
+    "interpretation": "Suche nach Unternehmen zum Verkauf (Status: KAUF)",
+    "filters": ["Status: KAUF"],
     "finsweetFilters": [
-        {"field": "Branche", "value": "B2B", "type": "checkbox"}
+        {"field": "Gesucht", "value": "KAUF", "type": "checkbox"}
     ],
-    "suggestions": ["B2B Services", "Business-to-Business"],
+    "suggestions": ["Verkaufsangebote", "Unternehmen zum Verkauf"],
+    "confidence": 0.95
+}
+
+Anfrage: "Unternehmen zum Verkauf gesucht"
+Antwort: {
+    "interpretation": "Suche nach Unternehmen zum Verkauf (Status: KAUF)",
+    "filters": ["Status: KAUF"],
+    "finsweetFilters": [
+        {"field": "Gesucht", "value": "KAUF", "type": "checkbox"}
+    ],
+    "suggestions": ["Verkaufsangebote", "Unternehmen zum Verkauf"],
+    "confidence": 0.9
+}
+
+Anfrage: "Welche Unternehmen werden verkauft?"
+Antwort: {
+    "interpretation": "Suche nach Unternehmen zum Verkauf (Status: KAUF)",
+    "filters": ["Status: KAUF"],
+    "finsweetFilters": [
+        {"field": "Gesucht", "value": "KAUF", "type": "checkbox"}
+    ],
+    "suggestions": ["Verkaufsangebote", "Unternehmen zum Verkauf"],
+    "confidence": 0.9
+}
+
+Anfrage: "Ich suche Unternehmen die gekauft werden können"
+Antwort: {
+    "interpretation": "Suche nach Unternehmen zum Verkauf (Status: KAUF)",
+    "filters": ["Status: KAUF"],
+    "finsweetFilters": [
+        {"field": "Gesucht", "value": "KAUF", "type": "checkbox"}
+    ],
+    "suggestions": ["Verkaufsangebote", "Unternehmen zum Verkauf"],
+    "confidence": 0.85
+}
+
+Anfrage: "Ich suche ein Unternehmen das zum Verkauf steht"
+Antwort: {
+    "interpretation": "Suche nach Unternehmen zum Verkauf (Status: VERKAUF)",
+    "filters": ["Status: VERKAUF"],
+    "finsweetFilters": [
+        {"field": "Gesucht", "value": "VERKAUF", "type": "checkbox"}
+    ],
+    "suggestions": ["Verkaufsangebote", "Unternehmen zum Verkauf"],
+    "confidence": 0.95
+}
+
+Anfrage: "Welche Unternehmen stehen zum Verkauf?"
+Antwort: {
+    "interpretation": "Suche nach Unternehmen zum Verkauf (Status: VERKAUF)",
+    "filters": ["Status: VERKAUF"],
+    "finsweetFilters": [
+        {"field": "Gesucht", "value": "VERKAUF", "type": "checkbox"}
+    ],
+    "suggestions": ["Verkaufsangebote", "Unternehmen zum Verkauf"],
+    "confidence": 0.9
+}
+
+Anfrage: "Unternehmen verkaufen"
+Antwort: {
+    "interpretation": "Suche nach Unternehmen zum Verkauf (Status: VERKAUF)",
+    "filters": ["Status: VERKAUF"],
+    "finsweetFilters": [
+        {"field": "Gesucht", "value": "VERKAUF", "type": "checkbox"}
+    ],
+    "suggestions": ["Verkaufsangebote", "Unternehmen zum Verkauf"],
+    "confidence": 0.9
+}
+
+Anfrage: "Ich will ein Unternehmen kaufen"
+Antwort: {
+    "interpretation": "Suche nach Unternehmen zum Verkauf (Status: VERKAUF)",
+    "filters": ["Status: VERKAUF"],
+    "finsweetFilters": [
+        {"field": "Gesucht", "value": "VERKAUF", "type": "checkbox"}
+    ],
+    "suggestions": ["Verkaufsangebote", "Unternehmen zum Verkauf"],
     "confidence": 0.85
 }
 
@@ -734,6 +811,19 @@ ANALYSE-REGELN für Unternehmensnamen und Beschreibungen:
 - Extrahiere Status-Indikatoren: "gesucht", "verkauf", "nachfolge", "übernahme"
 - Extrahiere Unternehmensgröße: "KMU", "Startup", "Familienunternehmen", "Konzern"
 - Extrahiere Geschäftsbereiche: "B2B", "B2C", "wholesale", "retail"
+
+STATUS-ERKENNUNG für fs-cmsfilter-field="Gesucht":
+- "zum Verkauf stehen", "verkaufen", "steht zum verkauf", "Verkauf", "verkauft werden" → Wert: "VERKAUF"
+- "zum Kauf stehen", "kaufen", "gekauft werden können", "Kauf", "gesucht" → Wert: "KAUF"
+- "gesucht", "kaufgesuch", "nachfolge gesucht", "GESUCHT" → Wert: "GESUCHT"
+- "nachfolge", "übernahme", "nachfolger gesucht", "NACHFOLGE" → Wert: "NACHFOLGE"
+
+WICHTIG: Prüfe die genauen Werte in Ihrer Webflow Collection für fs-cmsfilter-field="Gesucht"!
+Mögliche Werte in Webflow: "VERKAUF" (zum Verkauf), "KAUF" (zum Kauf), "GESUCHT", "NACHFOLGE"
+- Verwende EXAKT diese Werte wie sie in Webflow gespeichert sind!
+- "Ich suche Unternehmen die zum Verkauf stehen" → filtere nach "VERKAUF"
+- "Ich suche Unternehmen die zum Kauf stehen" → filtere nach "KAUF"
+
 - Kombiniere ALLE Informationen für maximale Trefferqualität
 
 Analysiere jetzt diese Anfrage: "${query}"`;
