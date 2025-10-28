@@ -536,6 +536,172 @@ app.get('/api/content', async (req, res) => {
     }
 });
 
+// KI-Such-Endpoint für Unternehmensbörse
+app.post('/api/ki-search', async (req, res) => {
+    try {
+        const { query, type } = req.body;
+
+        if (!query || typeof query !== 'string') {
+            return res.status(400).json({ 
+                error: 'Suchanfrage ist erforderlich' 
+            });
+        }
+
+        // Aktuelle Website-Inhalte abrufen
+        const currentContent = await getCurrentContent();
+        
+        // Erstelle erweiterten System-Prompt für KI-Suche
+        const searchSystemPrompt = `Du bist ein KI-Assistent für die Unternehmensbörse von TL Consult. Deine Aufgabe ist es, umgangssprachliche Suchanfragen zu analysieren und in konkrete Filterkriterien für die Unternehmensbörse umzuwandeln.
+
+UNTERNEHMENSBÖRSE-INFORMATIONEN:
+- Website: https://www.tl-consult.de/unternehmensboerse
+- Zielgruppe: Unternehmenskäufer, Investoren, Nachfolger
+- Filterkategorien: Branche, Größe, Standort, Umsatz, Mitarbeiterzahl, Alter, Spezialisierung
+
+VERFÜGBARE FILTERKATEGORIEN (basierend auf fs-cmsfilter-field):
+1. NAME:
+   - Unternehmensname oder Teil davon
+   - Beispiel: "Maschinenbau GmbH", "Tech Solutions"
+
+2. BESCHREIBUNG:
+   - Unternehmensbeschreibung oder Schlüsselwörter
+   - Beispiel: "Produktion", "Dienstleistung", "Innovation"
+
+3. GESUCHT:
+   - Status des Unternehmens (Verkauf/Gesucht)
+   - Werte: "Verkauf", "Gesucht", "Nachfolge"
+
+4. REGION:
+   - Geografische Lage
+   - Beispiel: "Hessen", "Bayern", "NRW", "Deutschland"
+
+5. BRANCHE:
+   - Industriezweig oder Geschäftsbereich
+   - Beispiel: "Maschinenbau", "IT", "Gesundheit", "Handwerk"
+
+6. PREIS:
+   - Kaufpreis oder Preisbereich
+   - Beispiel: "1-5 Mio", "unter 1 Mio", "über 10 Mio"
+
+AKTUELLE UNTERNEHMENSANGEBOTE:
+${currentContent.find(page => page.url.includes('unternehmensboerse'))?.companyListings?.map((company, index) => 
+    `${index + 1}. ${company.name} - ${company.status} - ${company.description}`
+).join('\n') || 'Keine aktuellen Angebote verfügbar'}
+
+AUFGABE:
+Analysiere die folgende umgangssprachliche Suchanfrage und wandle sie in konkrete Filterkriterien um.
+
+ANTWORTFORMAT (JSON):
+{
+    "interpretation": "Kurze Erklärung der Interpretation der Anfrage",
+    "filters": ["Liste der gefundenen Filterkriterien"],
+    "finsweetFilters": [
+        {
+            "field": "fs-cmsfilter-field Name",
+            "value": "Filterwert",
+            "type": "checkbox|select|range"
+        }
+    ],
+    "suggestions": ["Zusätzliche Suchvorschläge"],
+    "confidence": 0.95
+}
+
+BEISPIELE:
+
+Anfrage: "Ich suche ein Maschinenbau-Unternehmen"
+Antwort: {
+    "interpretation": "Suche nach Unternehmen aus der Maschinenbau-Branche",
+    "filters": ["Branche: Maschinenbau"],
+    "finsweetFilters": [
+        {"field": "Branche", "value": "Maschinenbau", "type": "checkbox"}
+    ],
+    "suggestions": ["Produktionsbetriebe", "Industrieunternehmen"],
+    "confidence": 0.95
+}
+
+Anfrage: "Unternehmen in Hessen zum Verkauf"
+Antwort: {
+    "interpretation": "Suche nach verkaufbaren Unternehmen in der Region Hessen",
+    "filters": ["Region: Hessen", "Status: Verkauf"],
+    "finsweetFilters": [
+        {"field": "Region", "value": "Hessen", "type": "checkbox"},
+        {"field": "Gesucht", "value": "Verkauf", "type": "checkbox"}
+    ],
+    "suggestions": ["Regionale Unternehmen", "Verkaufsangebote"],
+    "confidence": 0.9
+}
+
+Anfrage: "IT-Firma unter 5 Millionen"
+Antwort: {
+    "interpretation": "Suche nach IT-Unternehmen mit Preis unter 5 Millionen",
+    "filters": ["Branche: IT", "Preis: unter 5 Mio"],
+    "finsweetFilters": [
+        {"field": "Branche", "value": "IT", "type": "checkbox"},
+        {"field": "Preis", "value": "unter 5 Mio", "type": "checkbox"}
+    ],
+    "suggestions": ["Software-Unternehmen", "Tech-Startups"],
+    "confidence": 0.9
+}
+
+Analysiere jetzt diese Anfrage: "${query}"`;
+
+        // OpenAI API Aufruf für KI-Suche
+        const completion = await openai.chat.completions.create({
+            model: 'gpt-3.5-turbo',
+            messages: [
+                {
+                    role: 'system',
+                    content: searchSystemPrompt
+                },
+                {
+                    role: 'user',
+                    content: query
+                }
+            ],
+            temperature: 0.3,
+            max_tokens: 500
+        });
+
+        const reply = completion.choices[0].message.content;
+        
+        // Versuche JSON zu parsen
+        let searchResult;
+        try {
+            searchResult = JSON.parse(reply);
+        } catch (parseError) {
+            // Fallback falls JSON-Parsing fehlschlägt
+            searchResult = {
+                interpretation: reply,
+                filters: ["Allgemeine Suche"],
+                finsweetFilters: [],
+                suggestions: [],
+                confidence: 0.7
+            };
+        }
+
+        res.json(searchResult);
+
+    } catch (error) {
+        console.error('Fehler bei KI-Suche:', error);
+        
+        if (error.status === 401) {
+            return res.status(500).json({ 
+                error: 'API-Schlüssel ungültig' 
+            });
+        }
+        
+        if (error.status === 429) {
+            return res.status(429).json({ 
+                error: 'Rate-Limit überschritten. Bitte versuchen Sie es später erneut.' 
+            });
+        }
+
+        res.status(500).json({ 
+            error: 'Ein Fehler ist aufgetreten. Bitte versuchen Sie es später erneut.' 
+        });
+    }
+});
+
 // Server starten
 app.listen(PORT, () => {
     console.log(`🚀 ChatGPT Webflow Widget - TL Consult Server läuft auf Port ${PORT}`);
