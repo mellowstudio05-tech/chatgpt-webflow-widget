@@ -561,7 +561,11 @@ UNTERNEHMENSBÖRSE-INFORMATIONEN:
 VERFÜGBARE FILTERKATEGORIEN (basierend auf fs-cmsfilter-field):
 1. NAME:
    - Unternehmensname oder Teil davon
-   - Beispiel: "Maschinenbau GmbH", "Tech Solutions"
+   - WICHTIG: Analysiere auch den Namen auf enthaltene Informationen wie:
+     * Regionen/Städte: "München GmbH", "Hamburg Solutions", "Berlin Tech"
+     * Geschäftsbereiche: "B2B Services", "Medizintechnik AG", "IT Solutions"
+     * Branchen: "Maschinenbau GmbH", "Software Entwickler"
+   - Beispiel: "Maschinenbau GmbH", "Tech Solutions", "München B2B"
 
 2. BESCHREIBUNG:
    - Unternehmensbeschreibung oder Schlüsselwörter
@@ -572,12 +576,12 @@ VERFÜGBARE FILTERKATEGORIEN (basierend auf fs-cmsfilter-field):
    - Werte: "Verkauf", "Gesucht", "Nachfolge"
 
 4. REGION:
-   - Geografische Lage
-   - Beispiel: "Hessen", "Bayern", "NRW", "Deutschland"
+   - Geografische Lage (auch aus dem Namen extrahieren!)
+   - Beispiel: "Hessen", "Bayern", "NRW", "Deutschland", "München", "Hamburg"
 
 5. BRANCHE:
-   - Industriezweig oder Geschäftsbereich
-   - Beispiel: "Maschinenbau", "IT", "Gesundheit", "Handwerk"
+   - Industriezweig oder Geschäftsbereich (auch aus dem Namen extrahieren!)
+   - Beispiel: "Maschinenbau", "IT", "Gesundheit", "Handwerk", "B2B", "Medizintechnik"
 
 6. PREIS:
    - Kaufpreis oder Preisbereich
@@ -588,8 +592,19 @@ ${currentContent.find(page => page.url.includes('unternehmensboerse'))?.companyL
     `${index + 1}. ${company.name} - ${company.status} - ${company.description}`
 ).join('\n') || 'Keine aktuellen Angebote verfügbar'}
 
+WICHTIGE GESCHÄFTSBEGRIFFE zu erkennen:
+- Unternehmensgröße: "Marktführer", "KMU" (kleines mittelständisches Unternehmen), "Startup", "Familienunternehmen", "Konzern"
+- Unternehmensstatus: "Gesucht" (Kaufgesuch), "Verkauf" (Verkaufsangebot), "Nachfolge gesucht", "Übernahme gesucht"
+- Geschäftsbereiche: "B2B", "B2C", "B2B2C", "wholesale", "retail"
+- Regions-Hinweise in Namen: Städte (München, Hamburg, Berlin), Bundesländer (Hessen, Bayern, NRW)
+- Branchen in Namen: "IT", "Maschinenbau", "Medizintechnik", "Handwerk", "Gesundheit"
+
 AUFGABE:
-Analysiere die folgende umgangssprachliche Suchanfrage und wandle sie in konkrete Filterkriterien um.
+Analysiere die folgende umgangssprachliche Suchanfrage und wandle sie in konkrete Filterkriterien um. 
+Berücksichtige dabei ALLE Informationen:
+- Namen der Unternehmen (Regionen, Branchen, Geschäftsbereiche)
+- Beschreibungen (Marketing-Begriffe, Status-Indikatoren, Geschäftsbereiche)
+- Suchbegriffe mit spezieller Bedeutung (Marktführer, KMU, Gesucht, Verkauf, etc.)
 
 ANTWORTFORMAT (JSON):
 {
@@ -619,32 +634,107 @@ Antwort: {
     "confidence": 0.95
 }
 
+Anfrage: "Unternehmen in München"
+Antwort: {
+    "interpretation": "Suche nach Unternehmen in München (Region aus Name extrahieren)",
+    "filters": ["Region: München"],
+    "finsweetFilters": [
+        {"field": "Region", "value": "München", "type": "checkbox"}
+    ],
+    "suggestions": ["Münchner Unternehmen", "Bayrische Firmen"],
+    "confidence": 0.9
+}
+
+Anfrage: "B2B Unternehmen"
+Antwort: {
+    "interpretation": "Suche nach B2B-Unternehmen (Branche aus Name/Beschreibung)",
+    "filters": ["Branche: B2B"],
+    "finsweetFilters": [
+        {"field": "Branche", "value": "B2B", "type": "checkbox"}
+    ],
+    "suggestions": ["B2B Services", "Business-to-Business"],
+    "confidence": 0.9
+}
+
+Anfrage: "Medizintechnik AG"
+Antwort: {
+    "interpretation": "Suche nach Medizintechnik-Unternehmen (Branche aus Name)",
+    "filters": ["Branche: Medizintechnik"],
+    "finsweetFilters": [
+        {"field": "Branche", "value": "Medizintechnik", "type": "checkbox"}
+    ],
+    "suggestions": ["Gesundheitswesen", "Medizintechnik"],
+    "confidence": 0.95
+}
+
+Anfrage: "Hamburg Solutions"
+Antwort: {
+    "interpretation": "Suche nach Unternehmen in Hamburg (Region aus Name)",
+    "filters": ["Region: Hamburg"],
+    "finsweetFilters": [
+        {"field": "Region", "value": "Hamburg", "type": "checkbox"}
+    ],
+    "suggestions": ["Hamburger Unternehmen", "Norddeutsche Firmen"],
+    "confidence": 0.9
+}
+
+Anfrage: "Marktführer im Bereich IT"
+Antwort: {
+    "interpretation": "Suche nach marktführenden IT-Unternehmen",
+    "filters": ["Branche: IT", "Unternehmensgröße: Marktführer"],
+    "finsweetFilters": [
+        {"field": "Branche", "value": "IT", "type": "checkbox"}
+    ],
+    "suggestions": ["Große IT-Unternehmen", "Führende Tech-Firmen"],
+    "confidence": 0.8
+}
+
+Anfrage: "KMU gesucht"
+Antwort: {
+    "interpretation": "Suche nach kleinen mittelständischen Unternehmen zum Verkauf",
+    "filters": ["Unternehmensgröße: KMU", "Status: Gesucht"],
+    "finsweetFilters": [
+        {"field": "Gesucht", "value": "Verkauf", "type": "checkbox"}
+    ],
+    "suggestions": ["Kleine Unternehmen", "Mittelständische Betriebe"],
+    "confidence": 0.9
+}
+
+Anfrage: "Familienunternehmen zum Verkauf in Bayern"
+Antwort: {
+    "interpretation": "Suche nach Familienunternehmen zum Verkauf in Bayern",
+    "filters": ["Unternehmensgröße: Familienunternehmen", "Region: Bayern", "Status: Verkauf"],
+    "finsweetFilters": [
+        {"field": "Region", "value": "Bayern", "type": "checkbox"},
+        {"field": "Gesucht", "value": "Verkauf", "type": "checkbox"}
+    ],
+    "suggestions": ["Familienbetriebe", "Bayrische Unternehmen"],
+    "confidence": 0.95
+}
+
+Anfrage: "B2B Marktführer"
+Antwort: {
+    "interpretation": "Suche nach marktführenden B2B-Unternehmen",
+    "filters": ["Branche: B2B", "Unternehmensgröße: Marktführer"],
+    "finsweetFilters": [
+        {"field": "Branche", "value": "B2B", "type": "checkbox"}
+    ],
+    "suggestions": ["B2B Services", "Business-to-Business"],
+    "confidence": 0.85
+}
+
 WICHTIG: Die fs-cmsfilter-field Werte müssen EXAKT mit den Werten in Ihrer Webflow Collection übereinstimmen!
 Beispiel: Wenn in Webflow "Maschinenbau" steht, dann muss der Filter-Wert auch "Maschinenbau" sein.
 
-Anfrage: "Unternehmen in Hessen zum Verkauf"
-Antwort: {
-    "interpretation": "Suche nach verkaufbaren Unternehmen in der Region Hessen",
-    "filters": ["Region: Hessen", "Status: Verkauf"],
-    "finsweetFilters": [
-        {"field": "Region", "value": "Hessen", "type": "checkbox"},
-        {"field": "Gesucht", "value": "Verkauf", "type": "checkbox"}
-    ],
-    "suggestions": ["Regionale Unternehmen", "Verkaufsangebote"],
-    "confidence": 0.9
-}
-
-Anfrage: "IT-Firma unter 5 Millionen"
-Antwort: {
-    "interpretation": "Suche nach IT-Unternehmen mit Preis unter 5 Millionen",
-    "filters": ["Branche: IT", "Preis: unter 5 Mio"],
-    "finsweetFilters": [
-        {"field": "Branche", "value": "IT", "type": "checkbox"},
-        {"field": "Preis", "value": "unter 5 Mio", "type": "checkbox"}
-    ],
-    "suggestions": ["Software-Unternehmen", "Tech-Startups"],
-    "confidence": 0.9
-}
+ANALYSE-REGELN für Unternehmensnamen und Beschreibungen:
+- Extrahiere Städte/Regionen: "München GmbH" → Region: München
+- Extrahiere Branchen: "B2B Services" → Branche: B2B
+- Extrahiere Geschäftsbereiche: "Medizintechnik AG" → Branche: Medizintechnik
+- Extrahiere Marketing-Begriffe: "Marktführer", "etabliert", "innovativ"
+- Extrahiere Status-Indikatoren: "gesucht", "verkauf", "nachfolge", "übernahme"
+- Extrahiere Unternehmensgröße: "KMU", "Startup", "Familienunternehmen", "Konzern"
+- Extrahiere Geschäftsbereiche: "B2B", "B2C", "wholesale", "retail"
+- Kombiniere ALLE Informationen für maximale Trefferqualität
 
 Analysiere jetzt diese Anfrage: "${query}"`;
 
