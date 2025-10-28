@@ -619,6 +619,9 @@ Antwort: {
     "confidence": 0.95
 }
 
+WICHTIG: Die fs-cmsfilter-field Werte müssen EXAKT mit den Werten in Ihrer Webflow Collection übereinstimmen!
+Beispiel: Wenn in Webflow "Maschinenbau" steht, dann muss der Filter-Wert auch "Maschinenbau" sein.
+
 Anfrage: "Unternehmen in Hessen zum Verkauf"
 Antwort: {
     "interpretation": "Suche nach verkaufbaren Unternehmen in der Region Hessen",
