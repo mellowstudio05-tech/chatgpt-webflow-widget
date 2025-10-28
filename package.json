@@ -1,20 +1,23 @@
 {
   "name": "chatgpt-webflow-widget",
   "version": "1.0.0",
-  "description": "ChatGPT Widget für Webflow mit Node.js Backend",
+  "description": "KI-Assistent für TL Consult M&A GmbH - Unternehmensnachfolge im Mittelstand",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
     "dev": "nodemon server.js"
   },
   "keywords": [
-    "chatgpt",
-    "webflow",
+    "tl-consult",
+    "chatbot",
     "openai",
     "chat",
-    "widget"
+    "assistent",
+    "m&a",
+    "unternehmensnachfolge",
+    "unternehmensverkauf"
   ],
-  "author": "",
+  "author": "TL Consult M&A GmbH",
   "license": "MIT",
   "dependencies": {
     "cors": "^2.8.5",
