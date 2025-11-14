@@ -13,8 +13,8 @@ app.use(cors({
     origin: [
         'https://www.tl-consult.de',
         'https://tl-consult.de',
-        'http://localhost:3000',
-        'file://'
+        // Nur für lokale Entwicklung - in Produktion entfernen!
+        ...(process.env.NODE_ENV !== 'production' ? ['http://localhost:3000'] : [])
     ],
     credentials: true
 }));
